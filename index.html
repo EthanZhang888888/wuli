@@ -719,6 +719,13 @@
         let currentKinetic = 0;
         let currentPotential = 0;
 
+        // 判断小球是否静止（在地面上且速度极小）
+        function isBallAtRest() {
+            const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
+            const onGround = (ball.y + ball.radius >= GROUND_Y - 0.5);
+            return onGround && speedSq < 0.002;
+        }
+
         // ----- 轨迹开关 -----
         trajectoryToggle.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -750,10 +757,9 @@
 
         pauseBtn.addEventListener('click', togglePause);
 
-        // ----- 计算机械能 (修正：零势能面在地面) -----
+        // ----- 计算机械能 (零势能面在地面) -----
         function calcMechanicalEnergy(ballState) {
             const v = Math.sqrt(ballState.vx * ballState.vx + ballState.vy * ballState.vy);
-            // 关键修正：高度为球心到地面的距离减去半径，即球底部到地面的距离
             const h = Math.max(0, (GROUND_Y - ballState.y - ballState.radius) / 100);
             const kinetic = 0.5 * ballState.mass * v * v;
             const potential = ballState.mass * GRAVITY * h * 100;
@@ -797,7 +803,16 @@
 
         // ----- 更新报告 -----
         function updateReportAndBars() {
-            const energy = calcMechanicalEnergy(ball);
+            let energy = calcMechanicalEnergy(ball);
+
+            // 如果小球静止，强制所有能量归零（消除浮点误差）
+            if (isBallAtRest() && !isIdealMode) {
+                ball.vx = 0;
+                ball.vy = 0;
+                ball.y = GROUND_Y - ball.radius;
+                energy = { kinetic: 0, potential: 0, total: 0 };
+            }
+
             currentKinetic = energy.kinetic;
             currentPotential = energy.potential;
             currentMechanicalEnergy = energy.total;
@@ -806,7 +821,7 @@
                 const diff = currentMechanicalEnergy - initialMechanicalEnergy;
                 if (Math.abs(diff) > 1e-8 && initialMechanicalEnergy > 0) {
                     const scale = Math.sqrt((initialMechanicalEnergy - currentPotential) / Math.max(currentKinetic, 1e-10));
-                    if (isFinite(scale) && scale > 0) {
+                    if (isFinite(scale) && scale > 0 && scale < 10) {
                         ball.vx *= scale;
                         ball.vy *= scale;
                         const newEnergy = calcMechanicalEnergy(ball);
@@ -820,14 +835,19 @@
                 energyLoss = Math.max(0, initialMechanicalEnergy - currentMechanicalEnergy);
             }
 
-            // 修正高度显示
+            // 显示高度（底部到地面距离）
             const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
             heightDisplay.textContent = h.toFixed(2);
 
-            reportKinetic.textContent = currentKinetic.toFixed(2);
+            // 动能显示：如果静止则强制为0.00
+            const displayKinetic = isBallAtRest() && !isIdealMode ? 0 : currentKinetic;
+            const displayMechanical = isBallAtRest() && !isIdealMode ? 0 : currentMechanicalEnergy;
+            const displayLoss = isBallAtRest() && !isIdealMode ? initialMechanicalEnergy : energyLoss;
+
+            reportKinetic.textContent = displayKinetic.toFixed(2);
             reportPotential.textContent = currentPotential.toFixed(2);
-            reportMechanical.textContent = currentMechanicalEnergy.toFixed(2);
-            energyLossSpan.textContent = energyLoss.toFixed(3);
+            reportMechanical.textContent = displayMechanical.toFixed(2);
+            energyLossSpan.textContent = displayLoss.toFixed(3);
             stepCounterSpan.textContent = stepCount;
 
             const maxScale = Math.max(currentMechanicalEnergy, initialMechanicalEnergy, 5);
@@ -930,9 +950,9 @@
                 ball.vy = -ball.vy * restCoeff;
             }
 
-            // 速度极小时强制静止（机械能完全耗散）
+            // 速度极小时强制静止（消除浮点残余）
             const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
-            if (!isIdealMode && speedSq < 0.0005) {
+            if (!isIdealMode && speedSq < 0.002) {
                 ball.vx = 0;
                 ball.vy = 0;
                 if (ball.y + ball.radius > GROUND_Y - 1) {
@@ -1039,7 +1059,7 @@
             ctx.arc(ball.x-5, ball.y-7, r*0.25, 0, Math.PI*2);
             ctx.fill();
 
-            // 速度箭头
+            // 速度箭头（仅当速度足够大时显示）
             ctx.shadowBlur = 0;
             const speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
             if (speed > 0.02) {
