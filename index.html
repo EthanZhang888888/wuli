@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>物理沙盒 · 高中物理实验台 (含理想模式)</title>
+    <title>物理沙盒 · 高中物理实验台 (精确能量)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -597,13 +597,12 @@
         let initialVelocity = 3.0;
         let damping = 0.02;
         let restitution = 0.85;
-        let isIdealMode = false;   // 理想模式：无阻尼，恢复系数 = 1
+        let isIdealMode = false;
 
         const GRAVITY = 0.45;
         const GROUND_Y = 480;
         const LEFT_WALL = 50;
         const RIGHT_WALL = 850;
-        const REF_HEIGHT = GROUND_Y - 40;
 
         let ball = {
             x: 240, y: 300,
@@ -613,55 +612,37 @@
         };
 
         let stepCount = 0;
-        let initialEnergy = 0;
+        // 固定初始机械能 (在重置/拖拽释放时计算)
+        let initialMechanicalEnergy = 0;
+        let currentMechanicalEnergy = 0;
         let energyLoss = 0;
         let isDragging = false;
         let dragOffsetX = 0, dragOffsetY = 0;
 
         let currentKinetic = 0;
         let currentPotential = 0;
-        let currentMechanical = 0;
 
-        // ----- 理想模式切换 -----
-        function setIdealMode(enable) {
-            isIdealMode = enable;
-            if (enable) {
-                // 理想情况：阻尼置零，恢复系数=1，禁用滑块
-                dampingSlider.value = '0.00';
-                restitutionSlider.value = '1.00';
-                dampingSlider.disabled = true;
-                restitutionSlider.disabled = true;
-                dampVal.textContent = '0.00';
-                restitutionVal.textContent = '1.00';
-                idealToggle.classList.add('active');
-                modeIndicator.textContent = '理想 (无损耗)';
-                modeIndicator.style.background = '#1f8a4a';
-                // 强制更新物理参数
-                damping = 0.0;
-                restitution = 1.0;
-            } else {
-                // 恢复实际模式，启用滑块
-                dampingSlider.disabled = false;
-                restitutionSlider.disabled = false;
-                // 从滑块读取值
-                damping = parseFloat(dampingSlider.value);
-                restitution = parseFloat(restitutionSlider.value);
-                dampVal.textContent = damping.toFixed(3);
-                restitutionVal.textContent = restitution.toFixed(2);
-                idealToggle.classList.remove('active');
-                modeIndicator.textContent = '实际 (有损耗)';
-                modeIndicator.style.background = '#27ae60';
-            }
-            // 重置模拟以应用新参数
-            resetSimulation();
+        // ----- 计算机械能 (动能+重力势能) -----
+        function calcMechanicalEnergy(ballState) {
+            const v = Math.sqrt(ballState.vx * ballState.vx + ballState.vy * ballState.vy);
+            const h = Math.max(0, (GROUND_Y - ballState.y) / 100);
+            const kinetic = 0.5 * ballState.mass * v * v;
+            const potential = ballState.mass * GRAVITY * h * 100;
+            return { kinetic, potential, total: kinetic + potential };
         }
 
-        idealToggle.addEventListener('click', function(e) {
-            e.stopPropagation();
-            setIdealMode(!isIdealMode);
-        });
+        // ----- 更新初始能量 (基于当前小球状态) -----
+        function updateInitialEnergy() {
+            const energy = calcMechanicalEnergy(ball);
+            initialMechanicalEnergy = energy.total;
+            // 同时更新当前能量显示
+            currentKinetic = energy.kinetic;
+            currentPotential = energy.potential;
+            currentMechanicalEnergy = energy.total;
+            energyLoss = 0;
+        }
 
-        // ----- 重置模拟 -----
+        // ----- 重置模拟 (保留参数) -----
         function resetSimulation() {
             mass = parseFloat(massSlider.value);
             initialVelocity = parseFloat(velocitySlider.value);
@@ -681,40 +662,35 @@
             ball.vy = -1.5;
 
             stepCount = 0;
-            const speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-            const h = (GROUND_Y - ball.y) / 100;
-            initialEnergy = 0.5 * mass * speed * speed + mass * GRAVITY * h * 100;
-            energyLoss = 0;
+            // 重置时固定初始机械能
+            updateInitialEnergy();
             updateReportAndBars();
         }
 
-        // ----- 更新报告 + 能量条 -----
+        // ----- 更新报告 + 能量条 (基于当前ball状态) -----
         function updateReportAndBars() {
+            const energy = calcMechanicalEnergy(ball);
+            currentKinetic = energy.kinetic;
+            currentPotential = energy.potential;
+            currentMechanicalEnergy = energy.total;
+
+            // 能量损失 = 初始机械能 - 当前机械能 (非负)
+            energyLoss = Math.max(0, initialMechanicalEnergy - currentMechanicalEnergy);
+
             const h = Math.max(0, (GROUND_Y - ball.y) / 100);
             heightDisplay.textContent = h.toFixed(2);
 
-            const v = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-            currentKinetic = 0.5 * ball.mass * v * v;
-            currentPotential = ball.mass * GRAVITY * h * 100;
-            currentMechanical = currentKinetic + currentPotential;
-
             reportKinetic.textContent = currentKinetic.toFixed(2);
             reportPotential.textContent = currentPotential.toFixed(2);
-            reportMechanical.textContent = currentMechanical.toFixed(2);
-
-            if (initialEnergy > 0.01) {
-                energyLoss = initialEnergy - currentMechanical;
-                if (energyLoss < 0) energyLoss = 0;
-            } else {
-                if (v > 0.1) initialEnergy = currentMechanical;
-            }
+            reportMechanical.textContent = currentMechanicalEnergy.toFixed(2);
             energyLossSpan.textContent = energyLoss.toFixed(3);
             stepCounterSpan.textContent = stepCount;
 
-            const maxScale = Math.max(currentMechanical, 8, 1);
+            // 能量条 (机械能作为最大标度参考)
+            const maxScale = Math.max(currentMechanicalEnergy, initialMechanicalEnergy, 5);
             const kRatio = Math.min(currentKinetic / maxScale, 1);
             const pRatio = Math.min(currentPotential / maxScale, 1);
-            const mRatio = Math.min(currentMechanical / maxScale, 1);
+            const mRatio = Math.min(currentMechanicalEnergy / maxScale, 1);
 
             kineticBar.style.width = (kRatio * 100) + '%';
             potentialBar.style.width = (pRatio * 100) + '%';
@@ -733,11 +709,46 @@
             }
         }
 
-        // ----- 物理更新 -----
+        // ----- 理想模式切换 -----
+        function setIdealMode(enable) {
+            isIdealMode = enable;
+            if (enable) {
+                dampingSlider.value = '0.00';
+                restitutionSlider.value = '1.00';
+                dampingSlider.disabled = true;
+                restitutionSlider.disabled = true;
+                dampVal.textContent = '0.00';
+                restitutionVal.textContent = '1.00';
+                idealToggle.classList.add('active');
+                modeIndicator.textContent = '理想 (无损耗)';
+                modeIndicator.style.background = '#1f8a4a';
+                damping = 0.0;
+                restitution = 1.0;
+            } else {
+                dampingSlider.disabled = false;
+                restitutionSlider.disabled = false;
+                damping = parseFloat(dampingSlider.value);
+                restitution = parseFloat(restitutionSlider.value);
+                dampVal.textContent = damping.toFixed(3);
+                restitutionVal.textContent = restitution.toFixed(2);
+                idealToggle.classList.remove('active');
+                modeIndicator.textContent = '实际 (有损耗)';
+                modeIndicator.style.background = '#27ae60';
+            }
+            resetSimulation();
+        }
+
+        idealToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            setIdealMode(!isIdealMode);
+        });
+
+        // ----- 物理更新 (精确能量) -----
         function physicsUpdate() {
             let dampCoeff = isIdealMode ? 0 : damping;
             let restCoeff = isIdealMode ? 1.0 : restitution;
 
+            // 速度阻尼 (仅在实际模式生效)
             ball.vx *= (1 - dampCoeff * 0.4);
             ball.vy *= (1 - dampCoeff * 0.4);
             ball.vy += GRAVITY;
@@ -745,9 +756,10 @@
             ball.x += ball.vx;
             ball.y += ball.vy;
 
+            // 地面碰撞
             if (ball.y + ball.radius > GROUND_Y) {
                 ball.y = GROUND_Y - ball.radius;
-                if (ball.vy > 0.3) {
+                if (Math.abs(ball.vy) > 0.3) {
                     ball.vy = -ball.vy * restCoeff;
                     ball.vx *= (1 - dampCoeff * 0.2);
                 } else {
@@ -755,6 +767,7 @@
                 }
             }
 
+            // 墙壁碰撞
             if (ball.x - ball.radius < LEFT_WALL) {
                 ball.x = LEFT_WALL + ball.radius;
                 ball.vx = -ball.vx * restCoeff;
@@ -763,18 +776,10 @@
                 ball.vx = -ball.vx * restCoeff;
             }
 
+            // 天花板
             if (ball.y - ball.radius < 20) {
                 ball.y = 20 + ball.radius;
                 ball.vy = -ball.vy * restCoeff;
-            }
-
-            const v = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-            const h = (GROUND_Y - ball.y) / 100;
-            const currentE = 0.5 * ball.mass * v * v + ball.mass * GRAVITY * h * 100;
-            if (initialEnergy < 0.01 && v > 0.1) initialEnergy = currentE;
-            if (initialEnergy > 0.01) {
-                energyLoss = initialEnergy - currentE;
-                if (energyLoss < 0) energyLoss = 0;
             }
 
             stepCount++;
@@ -791,6 +796,7 @@
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, 900, 560);
 
+            // 地面
             ctx.fillStyle = '#6f92b0';
             ctx.shadowColor = 'rgba(0,0,0,0.1)';
             ctx.shadowBlur = 6;
@@ -803,6 +809,7 @@
             ctx.lineTo(900, GROUND_Y);
             ctx.stroke();
 
+            // 墙壁
             ctx.fillStyle = '#a8bfd8';
             ctx.shadowBlur = 4;
             ctx.fillRect(LEFT_WALL-6, 10, 6, GROUND_Y-10);
@@ -821,6 +828,7 @@
             ctx.font = '11px "Segoe UI"';
             ctx.fillText('零势能面 (地面)', RIGHT_WALL-100, GROUND_Y-6);
 
+            // 小球
             const r = ball.radius;
             ctx.shadowColor = 'rgba(0,0,0,0.25)';
             ctx.shadowBlur = 14;
@@ -841,6 +849,7 @@
             ctx.arc(ball.x-5, ball.y-7, r*0.25, 0, Math.PI*2);
             ctx.fill();
 
+            // 速度箭头
             ctx.shadowBlur = 0;
             ctx.strokeStyle = '#1f3a5e';
             ctx.lineWidth = 2.5;
@@ -852,13 +861,15 @@
             ctx.font = '12px "Segoe UI"';
             ctx.fillText('v', ball.x + ball.vx * 5 + 6, ball.y + ball.vy * 5 - 4);
 
+            // 信息
             ctx.fillStyle = '#1f3a5e';
             ctx.font = '13px "Segoe UI"';
             ctx.fillText(`h = ${((GROUND_Y - ball.y)/100).toFixed(2)} m`, 20, 30);
             ctx.fillText(`m = ${ball.mass.toFixed(2)} kg`, 20, 50);
 
+            // 能量条 (画布左侧)
             const barX = 20, barY = 70, barW = 14, maxH = 140;
-            const maxE = Math.max(currentMechanical, 5);
+            const maxE = Math.max(currentMechanicalEnergy, initialMechanicalEnergy, 5);
             const drawBar = (x, y, ratio, color) => {
                 const h = Math.min(ratio, 1) * maxH;
                 ctx.fillStyle = '#d0dbe8';
@@ -871,7 +882,7 @@
             };
             drawBar(barX, barY, currentKinetic / maxE, '#e67e22');
             drawBar(barX+20, barY, currentPotential / maxE, '#2e86de');
-            drawBar(barX+40, barY, currentMechanical / maxE, '#27ae60');
+            drawBar(barX+40, barY, currentMechanicalEnergy / maxE, '#27ae60');
             ctx.fillStyle = '#1f3a5e';
             ctx.font = '9px "Segoe UI"';
             ctx.fillText('Ek', barX+2, barY-6);
@@ -880,7 +891,7 @@
 
             // 理想模式标识
             if (isIdealMode) {
-                ctx.fillStyle = 'rgba(30, 120, 60, 0.15)';
+                ctx.fillStyle = 'rgba(30, 120, 60, 0.12)';
                 ctx.fillRect(0, 0, 900, 560);
                 ctx.fillStyle = '#1a6a3a';
                 ctx.font = 'bold 22px "Segoe UI"';
@@ -907,10 +918,8 @@
             }
             ball.mass = mass;
             ball.radius = 16 + mass * 3.5;
-            const v = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-            const h = (GROUND_Y - ball.y) / 100;
-            if (v > 0.1) initialEnergy = 0.5 * mass * v * v + mass * GRAVITY * h * 100;
-
+            // 更新初始能量 (基于当前速度)
+            updateInitialEnergy();
             updateSlidersDisplay();
             updateReportAndBars();
         }
@@ -922,7 +931,7 @@
 
         resetBtn.addEventListener('click', resetSimulation);
 
-        // ----- 拖拽交互 -----
+        // ----- 拖拽交互 (释放时重新固定初始能量) -----
         function getMousePos(e) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
@@ -966,9 +975,15 @@
             ball.y = newY;
             ball.vx = 0;
             ball.vy = 0;
-            initialEnergy = 0;
-            energyLoss = 0;
-            stepCount = 0;
+            // 拖拽过程中，能量暂时冻结，但不更新初始能量
+            // 这样能量条会显示当前势能，但损失为0
+            const energy = calcMechanicalEnergy(ball);
+            currentKinetic = energy.kinetic;
+            currentPotential = energy.potential;
+            currentMechanicalEnergy = energy.total;
+            // 不更新 initialMechanicalEnergy，保持原来的基准
+            energyLoss = Math.max(0, initialMechanicalEnergy - currentMechanicalEnergy);
+            stepCounterSpan.textContent = stepCount;
             updateReportAndBars();
             drawScene();
             e.preventDefault();
@@ -978,12 +993,12 @@
             if (isDragging) {
                 isDragging = false;
                 canvas.style.cursor = 'grab';
+                // 释放时赋予小速度，并重新固定初始能量
                 ball.vx = (Math.random() - 0.5) * 1.5;
                 ball.vy = -1.2;
-                const v = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-                const h = (GROUND_Y - ball.y) / 100;
-                if (v > 0.1) initialEnergy = 0.5 * ball.mass * v * v + ball.mass * GRAVITY * h * 100;
                 stepCount = 0;
+                // 重新固定初始机械能 (基于当前状态)
+                updateInitialEnergy();
                 updateReportAndBars();
                 e.preventDefault();
             }
@@ -1013,7 +1028,8 @@
             速度 v = ${v} m/s
             动能 Ek = ${currentKinetic.toFixed(2)} J
             势能 Ep = ${currentPotential.toFixed(2)} J
-            机械能 E = ${currentMechanical.toFixed(2)} J
+            机械能 E = ${currentMechanicalEnergy.toFixed(2)} J
+            初始机械能 E₀ = ${initialMechanicalEnergy.toFixed(2)} J
             能量损失 ΔE = ${energyLoss.toFixed(3)} J
             模拟步数: ${stepCount}
             ==========================
@@ -1030,7 +1046,6 @@
         exportQuestionBtn.addEventListener('click', () => handleExport('question'));
 
         // ----- 初始化 -----
-        // 默认实际模式
         setIdealMode(false);
         animate();
     })();
