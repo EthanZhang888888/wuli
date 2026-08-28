@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>物理沙盒 · 高中实验台 (含轨迹)</title>
+    <title>物理沙盒 · 高中实验台 (完整耗散)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -688,8 +688,6 @@
         // ----- 状态 -----
         let isPaused = false;
         let showTrajectory = false;
-
-        // ----- 轨迹数据 -----
         let trajectoryPoints = [];
 
         // ----- 物理参数 -----
@@ -727,7 +725,6 @@
             showTrajectory = !showTrajectory;
             if (showTrajectory) {
                 trajectoryToggle.classList.add('active');
-                // 重置轨迹
                 trajectoryPoints = [];
             } else {
                 trajectoryToggle.classList.remove('active');
@@ -887,13 +884,14 @@
             setIdealMode(!isIdealMode);
         });
 
-        // ----- 物理更新 -----
+        // ----- 物理更新 (修正耗散) -----
         function physicsUpdate() {
             if (isPaused) return;
 
             let dampCoeff = isIdealMode ? 0 : damping;
             let restCoeff = isIdealMode ? 1.0 : restitution;
 
+            // 速度阻尼
             if (!isIdealMode) {
                 ball.vx *= (1 - dampCoeff * 0.4);
                 ball.vy *= (1 - dampCoeff * 0.4);
@@ -903,9 +901,11 @@
             ball.x += ball.vx;
             ball.y += ball.vy;
 
+            // 地面碰撞
             if (ball.y + ball.radius > GROUND_Y) {
                 ball.y = GROUND_Y - ball.radius;
-                if (Math.abs(ball.vy) > 0.3) {
+                // 使用更小的速度阈值，让能量充分耗散
+                if (Math.abs(ball.vy) > 0.05) {
                     ball.vy = -ball.vy * restCoeff;
                     if (!isIdealMode) {
                         ball.vx *= (1 - dampCoeff * 0.2);
@@ -915,6 +915,7 @@
                 }
             }
 
+            // 墙壁碰撞
             if (ball.x - ball.radius < LEFT_WALL) {
                 ball.x = LEFT_WALL + ball.radius;
                 ball.vx = -ball.vx * restCoeff;
@@ -923,15 +924,26 @@
                 ball.vx = -ball.vx * restCoeff;
             }
 
+            // 天花板
             if (ball.y - ball.radius < 20) {
                 ball.y = 20 + ball.radius;
                 ball.vy = -ball.vy * restCoeff;
             }
 
-            // 记录轨迹（每隔2帧记录一个点，减少冗余）
+            // 🔥 关键修正：当总速度极小时，强制静止（机械能完全耗散）
+            const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
+            if (!isIdealMode && speedSq < 0.0005) {
+                ball.vx = 0;
+                ball.vy = 0;
+                // 确保小球在地面上
+                if (ball.y + ball.radius > GROUND_Y - 1) {
+                    ball.y = GROUND_Y - ball.radius;
+                }
+            }
+
+            // 记录轨迹
             if (showTrajectory && stepCount % 2 === 0) {
                 trajectoryPoints.push({ x: ball.x, y: ball.y });
-                // 限制轨迹点数量，防止性能问题
                 if (trajectoryPoints.length > 3000) {
                     trajectoryPoints.splice(0, 100);
                 }
@@ -965,7 +977,6 @@
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
-                // 轨迹上的小点（点缀）
                 if (trajectoryPoints.length > 10) {
                     for (let i = 0; i < trajectoryPoints.length; i += 12) {
                         ctx.beginPath();
@@ -1029,17 +1040,20 @@
             ctx.arc(ball.x-5, ball.y-7, r*0.25, 0, Math.PI*2);
             ctx.fill();
 
-            // 速度箭头
+            // 速度箭头 (仅当速度足够大时显示)
             ctx.shadowBlur = 0;
-            ctx.strokeStyle = '#1f3a5e';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.moveTo(ball.x, ball.y);
-            ctx.lineTo(ball.x + ball.vx * 5, ball.y + ball.vy * 5);
-            ctx.stroke();
-            ctx.fillStyle = '#1f3a5e';
-            ctx.font = '12px "Segoe UI"';
-            ctx.fillText('v', ball.x + ball.vx * 5 + 6, ball.y + ball.vy * 5 - 4);
+            const speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
+            if (speed > 0.02) {
+                ctx.strokeStyle = '#1f3a5e';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(ball.x, ball.y);
+                ctx.lineTo(ball.x + ball.vx * 5, ball.y + ball.vy * 5);
+                ctx.stroke();
+                ctx.fillStyle = '#1f3a5e';
+                ctx.font = '12px "Segoe UI"';
+                ctx.fillText('v', ball.x + ball.vx * 5 + 6, ball.y + ball.vy * 5 - 4);
+            }
 
             ctx.fillStyle = '#1f3a5e';
             ctx.font = '13px "Segoe UI"';
@@ -1084,7 +1098,6 @@
                 ctx.fillText('⏸ 已暂停', 380, 280);
             }
 
-            // 轨迹开关状态指示
             if (showTrajectory) {
                 ctx.fillStyle = 'rgba(200, 60, 30, 0.6)';
                 ctx.font = '12px "Segoe UI"';
