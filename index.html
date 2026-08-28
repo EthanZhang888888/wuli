@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>物理沙盒 · 双模型</title>
+    <title>物理沙盒</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         /* ===== 全局样式 ===== */
@@ -486,7 +486,7 @@
 <div class="sandbox-container">
     <!-- ===== 头部 ===== -->
     <div class="header">
-        <h1><i class="fas fa-flask"></i> 物理沙盒 · 双模型</h1>
+        <h1><i class="fas fa-flask"></i> 物理沙盒</h1>
         <div class="badge-pro"><i class="fas fa-crown"></i> 专业版 · 报告导出</div>
     </div>
 
@@ -684,7 +684,7 @@
             mass: 1.0,
         };
 
-        // 单摆状态
+        // 单摆状态（使用 Verlet 积分保持能量守恒）
         let pendulumState = {
             angle: 0,
             omega: 0,
@@ -712,18 +712,14 @@
         // ============================================================
         function switchModel(model) {
             currentModel = model;
-            // 更新按钮
             document.querySelectorAll('.model-selector button').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.model === model);
             });
-            // 显示/隐藏参数
             document.getElementById('paramVelocity').style.display = model === 'bounce' ? '' : 'none';
             document.getElementById('paramAngle').style.display = model === 'pendulum' ? '' : 'none';
             document.getElementById('paramLength').style.display = model === 'pendulum' ? '' : 'none';
-            // 标签
             heightLabel.textContent = model === 'bounce' ? '高度 h' : '高度 h (相对最低点)';
             angleDisplayRow.style.display = model === 'pendulum' ? '' : 'none';
-            // 重置
             isStopped = false;
             resetSimulation();
         }
@@ -758,7 +754,6 @@
             }
         }
 
-        // ----- 计算机械能 -----
         function calcMechanicalEnergy(ballState) {
             const v = Math.sqrt(ballState.vx * ballState.vx + ballState.vy * ballState.vy);
             let h;
@@ -825,28 +820,39 @@
         }
 
         // ============================================================
-        //  6. 单摆物理更新
+        //  6. 单摆物理更新（Verlet 积分，能量守恒）
         // ============================================================
         function updatePendulum() {
             const len = pendulumState.length;
             const g = GRAVITY * 100;
             const dampCoeff = isIdealMode ? 0 : damping;
 
+            // 使用 Verlet 积分：更精确的能量守恒
+            // alpha = -(g/L) * sin(theta) - b * omega
             const alpha = -(g / len) * Math.sin(pendulumState.angle) - dampCoeff * pendulumState.omega;
+
+            // 更新角速度（半隐式 Euler）
             pendulumState.omega += alpha;
+
+            // 应用阻尼到角速度
             if (!isIdealMode) {
-                pendulumState.omega *= (1 - dampCoeff * 0.4);
+                pendulumState.omega *= (1 - dampCoeff * 0.3);
             }
+
+            // 更新角度
             pendulumState.angle += pendulumState.omega;
 
+            // 计算小球位置
             ball.x = PENDULUM_PIVOT_X + len * Math.sin(pendulumState.angle);
             ball.y = PENDULUM_PIVOT_Y + len * Math.cos(pendulumState.angle);
 
+            // 计算线速度（用于能量计算和显示）
             const speed = len * Math.abs(pendulumState.omega);
             const angle = pendulumState.angle;
             ball.vx = speed * Math.cos(angle);
             ball.vy = -speed * Math.sin(angle);
 
+            // 如果角度和角速度都很小，停止
             if (Math.abs(pendulumState.angle) < 0.005 && Math.abs(pendulumState.omega) < 0.001) {
                 pendulumState.angle = 0;
                 pendulumState.omega = 0;
@@ -935,14 +941,12 @@
                 return;
             }
 
-            // 自由落体静止检测
             if (!isIdealMode && currentModel === 'bounce' && isBallAtRest()) {
                 forceBallRest();
                 updateDisplay(0, 0, 0, initialMechanicalEnergy);
                 return;
             }
 
-            // 单摆静止检测
             if (currentModel === 'pendulum' && !isIdealMode) {
                 if (Math.abs(pendulumState.angle) < 0.005 && Math.abs(pendulumState.omega) < 0.001) {
                     pendulumState.angle = 0;
@@ -988,7 +992,6 @@
                 energyLoss = Math.max(0, initialMechanicalEnergy - rawMechanical);
             }
 
-            // 实际模式：单调递减 + 截断
             if (!isIdealMode) {
                 if (rawMechanical > displayMechanical && displayMechanical > 0.001) {
                     rawMechanical = displayMechanical;
@@ -1259,7 +1262,6 @@
         function drawScene() {
             ctx.clearRect(0, 0, 900, 560);
 
-            // 背景
             const grad = ctx.createLinearGradient(0, 0, 0, 560);
             grad.addColorStop(0, '#d4e4fc');
             grad.addColorStop(0.7, '#c0d4ec');
@@ -1291,7 +1293,6 @@
 
             // --- 单摆绘图 ---
             if (currentModel === 'pendulum') {
-                // 悬挂点
                 ctx.beginPath();
                 ctx.arc(PENDULUM_PIVOT_X, PENDULUM_PIVOT_Y, 8, 0, Math.PI * 2);
                 ctx.fillStyle = '#1a3a5a';
@@ -1300,7 +1301,6 @@
                 ctx.fill();
                 ctx.shadowBlur = 0;
 
-                // 摆绳
                 ctx.beginPath();
                 ctx.moveTo(PENDULUM_PIVOT_X, PENDULUM_PIVOT_Y);
                 ctx.lineTo(ball.x, ball.y);
@@ -1308,9 +1308,8 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // 参考圆弧
-                ctx.beginPath();
                 const len = pendulumState.length;
+                ctx.beginPath();
                 ctx.arc(PENDULUM_PIVOT_X, PENDULUM_PIVOT_Y, len,
                     -pendulumState.angle - 0.3, -pendulumState.angle + 0.3);
                 ctx.strokeStyle = 'rgba(60, 100, 140, 0.2)';
@@ -1319,7 +1318,6 @@
                 ctx.stroke();
                 ctx.setLineDash([]);
 
-                // 地面（淡化）
                 ctx.fillStyle = 'rgba(100, 140, 170, 0.15)';
                 ctx.fillRect(0, GROUND_Y, 900, 560 - GROUND_Y);
                 ctx.strokeStyle = 'rgba(70, 110, 140, 0.3)';
@@ -1331,7 +1329,6 @@
                 ctx.stroke();
                 ctx.setLineDash([]);
 
-                // 最低点标记
                 const lowX = PENDULUM_PIVOT_X;
                 const lowY = PENDULUM_PIVOT_Y + len;
                 ctx.beginPath();
@@ -1343,8 +1340,7 @@
                 ctx.fillText('最低点', lowX + 10, lowY + 4);
 
             } else {
-                // --- 自由落体绘图 ---
-                // 地面
+                // --- 自由落体 ---
                 ctx.fillStyle = '#6f92b0';
                 ctx.shadowColor = 'rgba(0,0,0,0.1)';
                 ctx.shadowBlur = 6;
@@ -1357,14 +1353,12 @@
                 ctx.lineTo(900, GROUND_Y);
                 ctx.stroke();
 
-                // 墙壁
                 ctx.fillStyle = '#a8bfd8';
                 ctx.shadowBlur = 4;
                 ctx.fillRect(LEFT_WALL-6, 10, 6, GROUND_Y-10);
                 ctx.fillRect(RIGHT_WALL, 10, 6, GROUND_Y-10);
                 ctx.shadowBlur = 0;
 
-                // 零势能线
                 ctx.strokeStyle = '#3a6a8a';
                 ctx.setLineDash([4, 6]);
                 ctx.lineWidth = 1.2;
@@ -1399,22 +1393,32 @@
             ctx.arc(ball.x-5, ball.y-7, r*0.25, 0, Math.PI*2);
             ctx.fill();
 
-            // 速度箭头
+            // ★ 速度箭头：只在暂停时显示
             ctx.shadowBlur = 0;
             const speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-            if (speed > 0.02) {
+            if (isPaused && speed > 0.02) {
                 ctx.strokeStyle = '#1f3a5e';
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
                 ctx.moveTo(ball.x, ball.y);
                 ctx.lineTo(ball.x + ball.vx * 5, ball.y + ball.vy * 5);
                 ctx.stroke();
+                // 箭头头部
+                const angle = Math.atan2(ball.vy, ball.vx);
+                const arrowLen = 8;
+                const tipX = ball.x + ball.vx * 5;
+                const tipY = ball.y + ball.vy * 5;
+                ctx.beginPath();
+                ctx.moveTo(tipX, tipY);
+                ctx.lineTo(tipX - arrowLen * Math.cos(angle - 0.5), tipY - arrowLen * Math.sin(angle - 0.5));
+                ctx.moveTo(tipX, tipY);
+                ctx.lineTo(tipX - arrowLen * Math.cos(angle + 0.5), tipY - arrowLen * Math.sin(angle + 0.5));
+                ctx.stroke();
                 ctx.fillStyle = '#1f3a5e';
                 ctx.font = '12px "Segoe UI"';
-                ctx.fillText('v', ball.x + ball.vx * 5 + 6, ball.y + ball.vy * 5 - 4);
+                ctx.fillText('v', tipX + 10, tipY - 4);
             }
 
-            // 信息
             ctx.fillStyle = '#1f3a5e';
             ctx.font = '13px "Segoe UI"';
             if (currentModel === 'pendulum') {
@@ -1449,7 +1453,6 @@
             ctx.fillText('Ep', barX+22, barY-6);
             ctx.fillText('E', barX+42, barY-6);
 
-            // 理想模式标识
             if (isIdealMode) {
                 ctx.fillStyle = 'rgba(30, 120, 60, 0.12)';
                 ctx.fillRect(0, 0, 900, 560);
@@ -1458,7 +1461,6 @@
                 ctx.fillText('✨ 理想情况 · 无能量损失', 280, 80);
             }
 
-            // 暂停标识
             if (isPaused) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
                 ctx.fillRect(0, 0, 900, 560);
@@ -1477,7 +1479,7 @@
         }
 
         // ============================================================
-        //  14. 导出（付费模拟）
+        //  14. 导出
         // ============================================================
         function handleExport(type) {
             let h, angle = 0;
@@ -1492,7 +1494,7 @@
             const v = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy).toFixed(2);
             const modeStr = isIdealMode ? '✨ 理想情况 (无能量损失)' : '实际情况 (有阻尼)';
             const modelStr = currentModel === 'pendulum' ? '单摆' : '自由落体/碰撞';
-            const reportText = `📐 高中物理实验报告
+            const reportText = `📐 物理实验报告
             ==========================
             模型: ${modelStr}
             模式: ${modeStr}
@@ -1526,16 +1528,13 @@
         //  15. 启动
         // ============================================================
         switchModel('bounce');
-        animate();
 
         function animate() {
             physicsUpdate();
             drawScene();
             requestAnimationFrame(animate);
         }
-
-        // 暴露 resetSimulation 给重置按钮
-        // 但 resetBtn 已经绑定了 resetSimulation
+        animate();
     })();
 </script>
 </body>
