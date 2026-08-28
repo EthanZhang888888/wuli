@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>物理沙盒 · 参数实验台</title>
-    <!-- Font Awesome 图标库 (免费) -->
+    <title>物理沙盒 · 高中物理实验台</title>
+    <!-- Font Awesome 图标库 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -15,7 +15,7 @@
         }
 
         body {
-            background: linear-gradient(145deg, #f5f9ff 0%, #e6edf7 100%);
+            background: linear-gradient(145deg, #f0f7fe 0%, #dce8f5 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -24,50 +24,48 @@
         }
 
         .sandbox-container {
-            max-width: 1300px;
+            max-width: 1400px;
             width: 100%;
-            background: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border-radius: 48px;
-            box-shadow: 0 25px 50px -10px rgba(0, 20, 40, 0.25), inset 0 1px 2px rgba(255,255,255,0.6);
-            padding: 30px 30px 40px;
-            transition: all 0.2s;
-            border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 0 25px 50px -10px rgba(0, 20, 40, 0.3), inset 0 1px 2px rgba(255,255,255,0.6);
+            padding: 28px 30px 36px;
+            border: 1px solid rgba(255,255,255,0.6);
         }
 
-        /* 头部 */
         .header {
             display: flex;
             flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 28px;
         }
 
         .header h1 {
-            font-weight: 600;
-            font-size: 2.2rem;
+            font-weight: 700;
+            font-size: 2.0rem;
             letter-spacing: -0.5px;
-            color: #0b1e33;
+            color: #0b2a47;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
         }
 
         .header h1 i {
-            background: #1a3b5d;
+            background: #1a4b7a;
             color: white;
-            padding: 8px 14px;
+            padding: 8px 16px;
             border-radius: 40px;
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             box-shadow: 0 8px 14px -6px rgba(20, 60, 120, 0.3);
         }
 
         .badge-pro {
             background: #ffb347;
             color: #1f2a3a;
-            padding: 8px 20px;
+            padding: 8px 22px;
             border-radius: 100px;
             font-weight: 600;
             font-size: 0.9rem;
@@ -82,27 +80,26 @@
             font-size: 1rem;
         }
 
-        /* 主布局: 实验台 + 侧边报告 */
         .main-layout {
             display: grid;
-            grid-template-columns: 1fr 340px;
+            grid-template-columns: 1fr 370px;
             gap: 28px;
         }
 
-        @media (max-width: 880px) {
+        @media (max-width: 920px) {
             .main-layout {
                 grid-template-columns: 1fr;
                 gap: 30px;
             }
         }
 
-        /* ===== 左: 实验台 ===== */
+        /* 实验台 */
         .experiment-stage {
-            background: #ffffffcc;
+            background: #ffffffd9;
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
             border-radius: 32px;
-            padding: 24px 24px 30px;
+            padding: 22px 22px 28px;
             box-shadow: 0 8px 20px rgba(0, 20, 30, 0.08);
             border: 1px solid rgba(255,255,255,0.7);
         }
@@ -111,29 +108,26 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 18px;
+            margin-bottom: 16px;
             font-weight: 500;
             color: #1d3557;
         }
 
         .stage-title span {
             background: #dce9f7;
-            padding: 6px 16px;
+            padding: 6px 18px;
             border-radius: 40px;
             font-size: 0.8rem;
             color: #1f4a7a;
         }
 
         .canvas-wrapper {
-            background: #eef3fc;
+            background: #eaf1fb;
             border-radius: 24px;
             overflow: hidden;
             box-shadow: inset 0 4px 8px rgba(0,0,0,0.02), 0 10px 20px -10px rgba(0,20,40,0.1);
             aspect-ratio: 16 / 10;
-            min-height: 240px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            min-height: 260px;
             position: relative;
         }
 
@@ -141,7 +135,7 @@
             display: block;
             width: 100%;
             height: 100%;
-            background: #eef3fc;
+            background: #eaf1fb;
             cursor: grab;
         }
 
@@ -149,18 +143,17 @@
             cursor: grabbing;
         }
 
-        /* 参数控制区 */
         .controls-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 18px 20px;
-            margin-top: 28px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px 18px;
+            margin-top: 24px;
         }
 
         .param-item {
             background: #f2f8ff;
             border-radius: 24px;
-            padding: 14px 18px 18px;
+            padding: 12px 16px 16px;
             border: 1px solid rgba(255,255,255,0.7);
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
         }
@@ -170,9 +163,9 @@
             justify-content: space-between;
             font-weight: 500;
             color: #1f3a57;
-            font-size: 0.9rem;
-            letter-spacing: 0.3px;
-            margin-bottom: 6px;
+            font-size: 0.85rem;
+            letter-spacing: 0.2px;
+            margin-bottom: 4px;
         }
 
         .param-item label i {
@@ -188,7 +181,7 @@
             -webkit-appearance: none;
             appearance: none;
             outline: none;
-            margin: 8px 0 4px;
+            margin: 6px 0 2px;
         }
 
         .param-item input[type="range"]::-webkit-slider-thumb {
@@ -206,15 +199,15 @@
 
         .param-value {
             text-align: right;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 600;
             color: #123456;
             background: white;
-            padding: 2px 12px;
+            padding: 0 12px;
             border-radius: 40px;
             display: inline-block;
             float: right;
-            margin-top: 4px;
+            margin-top: 2px;
             border: 1px solid #d0def0;
         }
 
@@ -238,9 +231,9 @@
             border-color: #8eb3d9;
         }
 
-        /* ===== 右侧报告面板 ===== */
+        /* 右侧报告 */
         .report-sidebar {
-            background: #ffffffd9;
+            background: #ffffffdd;
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             border-radius: 32px;
@@ -269,8 +262,8 @@
             font-size: 0.8rem;
             color: #567394;
             border-bottom: 1px solid #dae5f2;
-            padding-bottom: 14px;
-            margin-bottom: 18px;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
             display: flex;
             justify-content: space-between;
         }
@@ -279,32 +272,57 @@
             flex: 1;
             background: #f4faff;
             border-radius: 20px;
-            padding: 18px 16px;
-            margin-bottom: 22px;
+            padding: 16px 16px;
+            margin-bottom: 18px;
             border: 1px solid #e2edfb;
-            min-height: 180px;
-            font-size: 0.95rem;
-            line-height: 1.6;
+            min-height: 200px;
+            font-size: 0.92rem;
+            line-height: 1.7;
             color: #1f3853;
             box-shadow: inset 0 2px 6px rgba(0,0,0,0.02);
         }
 
         .report-content p {
-            margin-bottom: 8px;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .report-content .highlight {
             background: #dceaff;
-            padding: 2px 8px;
+            padding: 0 12px;
             border-radius: 40px;
-            font-weight: 500;
+            font-weight: 600;
+            color: #00337a;
         }
+
+        .energy-bar-wrap {
+            background: #dce5f0;
+            border-radius: 30px;
+            height: 12px;
+            width: 100%;
+            margin: 6px 0 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .energy-bar-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 30px;
+            transition: width 0.1s ease;
+        }
+
+        .energy-bar-fill.kinetic { background: #e67e22; }
+        .energy-bar-fill.potential { background: #2e86de; }
+        .energy-bar-fill.mechanical { background: #27ae60; }
 
         .action-buttons {
             display: flex;
             flex-direction: column;
             gap: 12px;
-            margin-top: 6px;
+            margin-top: 4px;
         }
 
         .btn-primary, .btn-outline {
@@ -351,31 +369,21 @@
             border-color: #8eb3db;
         }
 
-        .btn-outline i {
-            color: #2b6a9e;
-        }
-
-        .lock-icon {
-            opacity: 0.7;
-            font-size: 0.9rem;
-        }
-
         .footnote {
-            margin-top: 20px;
+            margin-top: 16px;
             font-size: 0.75rem;
             color: #6a86a3;
             text-align: center;
             border-top: 1px solid #dae5f2;
-            padding-top: 16px;
+            padding-top: 14px;
         }
 
-        /* 响应式微调 */
         @media (max-width: 600px) {
             .sandbox-container {
-                padding: 16px;
+                padding: 14px;
             }
             .header h1 {
-                font-size: 1.6rem;
+                font-size: 1.4rem;
             }
         }
     </style>
@@ -385,75 +393,78 @@
 <div class="sandbox-container">
     <!-- 头部 -->
     <div class="header">
-        <h1><i class="fas fa-flask"></i> 物理沙盒 · 实验台</h1>
+        <h1><i class="fas fa-flask"></i> 物理沙盒 · 高中实验台</h1>
         <div class="badge-pro"><i class="fas fa-crown"></i> 专业版 · 报告导出</div>
     </div>
 
     <!-- 主布局 -->
     <div class="main-layout">
-        <!-- 左侧：实验台 -->
+        <!-- 左侧实验台 -->
         <div class="experiment-stage">
             <div class="stage-title">
-                <span><i class="fas fa-arrow-pointer" style="margin-right: 6px;"></i> 拖拽小球 · 实时交互</span>
+                <span><i class="fas fa-arrow-pointer" style="margin-right: 6px;"></i> 拖拽小球 · 探究能量</span>
                 <button class="reset-btn" id="resetSimBtn"><i class="fas fa-rotate-right"></i> 重置</button>
             </div>
 
-            <!-- Canvas -->
             <div class="canvas-wrapper">
-                <canvas id="physicsCanvas" width="800" height="500"></canvas>
+                <canvas id="physicsCanvas" width="900" height="560"></canvas>
             </div>
 
-            <!-- 参数控制器 -->
+            <!-- 参数控制 -->
             <div class="controls-grid">
                 <div class="param-item">
-                    <label><i class="fas fa-weight-scale"></i> 质量 (m) <span class="param-value" id="massVal">1.0</span></label>
-                    <input type="range" id="massSlider" min="0.2" max="3.0" step="0.1" value="1.0">
+                    <label><i class="fas fa-weight-scale"></i> 质量 m <span class="param-value" id="massVal">1.0</span></label>
+                    <input type="range" id="massSlider" min="0.3" max="3.0" step="0.1" value="1.0">
                 </div>
                 <div class="param-item">
-                    <label><i class="fas fa-arrow-right"></i> 初速度 (v₀) <span class="param-value" id="velVal">3.0</span></label>
-                    <input type="range" id="velocitySlider" min="0.5" max="6.0" step="0.2" value="3.0">
+                    <label><i class="fas fa-arrow-right"></i> 初速度 v₀ <span class="param-value" id="velVal">3.0</span></label>
+                    <input type="range" id="velocitySlider" min="0.0" max="6.0" step="0.2" value="3.0">
                 </div>
                 <div class="param-item">
-                    <label><i class="fas fa-droplet"></i> 阻尼 (b) <span class="param-value" id="dampVal">0.02</span></label>
+                    <label><i class="fas fa-droplet"></i> 阻尼 b <span class="param-value" id="dampVal">0.02</span></label>
                     <input type="range" id="dampingSlider" min="0.00" max="0.10" step="0.002" value="0.02">
                 </div>
-                <div class="param-item" style="grid-column: span 1; display: flex; align-items: center; gap: 8px; background: #e6f0fe;">
-                    <i class="fas fa-arrows-spin" style="color: #1f4f8a;"></i>
-                    <span style="font-weight: 500; color: #1f3a57;">恢复系数 e = <span id="restitutionVal">0.85</span></span>
-                    <input type="range" id="restitutionSlider" min="0.30" max="1.00" step="0.01" value="0.85" style="flex:1;">
+                <div class="param-item">
+                    <label><i class="fas fa-arrows-spin"></i> 恢复系数 e <span class="param-value" id="restitutionVal">0.85</span></label>
+                    <input type="range" id="restitutionSlider" min="0.30" max="1.00" step="0.01" value="0.85">
                 </div>
             </div>
         </div>
 
-        <!-- 右侧：报告/导出面板 -->
+        <!-- 右侧报告面板 -->
         <div class="report-sidebar">
             <h3><i class="fas fa-file-pen"></i> 实验报告</h3>
             <div class="report-meta">
                 <span><i class="far fa-clock"></i> 实时更新</span>
-                <span><i class="fas fa-circle" style="color: #2b9e6a; font-size: 0.6rem;"></i> 动态参数</span>
+                <span><i class="fas fa-circle" style="color: #2b9e6a; font-size: 0.6rem;"></i> 能量追踪</span>
             </div>
 
             <div class="report-content" id="reportContent">
-                <p><i class="fas fa-circle" style="color: #2b6a9e; font-size: 0.6rem;"></i> <strong>当前状态</strong></p>
-                <p>质量: <span class="highlight" id="reportMass">1.0</span> kg</p>
-                <p>初速度: <span class="highlight" id="reportVel">3.0</span> m/s</p>
-                <p>阻尼: <span class="highlight" id="reportDamp">0.02</span> N·s/m</p>
-                <p>恢复系数: <span class="highlight" id="reportRest">0.85</span></p>
-                <p style="margin-top: 10px; border-top: 1px dashed #b8cfe5; padding-top: 10px;">
-                    <i class="fas fa-arrow-trend-up"></i> 能量损失: <span id="energyLoss" class="highlight">0.0</span> J
+                <p><strong>⚡ 动能 Ek</strong> <span class="highlight" id="reportKinetic">0.00</span> J</p>
+                <div class="energy-bar-wrap"><div class="energy-bar-fill kinetic" id="kineticBar" style="width:0%"></div></div>
+
+                <p><strong>⬆ 重力势能 Ep</strong> <span class="highlight" id="reportPotential">0.00</span> J</p>
+                <div class="energy-bar-wrap"><div class="energy-bar-fill potential" id="potentialBar" style="width:0%"></div></div>
+
+                <p><strong>🔄 机械能 E</strong> <span class="highlight" id="reportMechanical">0.00</span> J</p>
+                <div class="energy-bar-wrap"><div class="energy-bar-fill mechanical" id="mechanicalBar" style="width:0%"></div></div>
+
+                <p style="margin-top: 8px; border-top: 1px dashed #b8cfe5; padding-top: 10px;">
+                    <span>损失 ΔE</span> <span class="highlight" id="energyLoss">0.000</span> J
                 </p>
-                <p><i class="fas fa-bolt"></i> 模拟步数: <span id="stepCounter">0</span></p>
+                <p><span>模拟步数</span> <span class="highlight" id="stepCounter">0</span></p>
+                <p><span>高度 h</span> <span class="highlight" id="heightDisplay">0.00</span> m</p>
             </div>
 
             <div class="action-buttons">
                 <button class="btn-primary" id="exportReportBtn"><i class="fas fa-file-pdf"></i> 导出完整报告 (付费)</button>
                 <button class="btn-outline" id="exportQuestionBtn"><i class="fas fa-file-export"></i> 导出题目 & 数据 (付费)</button>
-                <div style="font-size: 0.75rem; color: #4f7193; display: flex; gap: 8px; justify-content: center; margin-top: 4px;">
+                <div style="font-size: 0.75rem; color: #4f7193; display: flex; gap: 8px; justify-content: center; margin-top: 2px;">
                     <i class="fas fa-lock"></i> 高级导出需订阅专业版
                 </div>
             </div>
             <div class="footnote">
-                <i class="fas fa-rotate"></i> 拖拽小球改变初始位置
+                <i class="fas fa-rotate"></i> 拖拽小球改变位置 · 观察能量转化
             </div>
         </div>
     </div>
@@ -461,11 +472,10 @@
 
 <script>
     (function() {
-        // ----- 获取 DOM 元素 -----
+        // ----- DOM 元素 -----
         const canvas = document.getElementById('physicsCanvas');
         const ctx = canvas.getContext('2d');
 
-        // 滑块
         const massSlider = document.getElementById('massSlider');
         const velocitySlider = document.getElementById('velocitySlider');
         const dampingSlider = document.getElementById('dampingSlider');
@@ -476,15 +486,17 @@
         const dampVal = document.getElementById('dampVal');
         const restitutionVal = document.getElementById('restitutionVal');
 
-        // 报告字段
-        const reportMass = document.getElementById('reportMass');
-        const reportVel = document.getElementById('reportVel');
-        const reportDamp = document.getElementById('reportDamp');
-        const reportRest = document.getElementById('reportRest');
+        const reportKinetic = document.getElementById('reportKinetic');
+        const reportPotential = document.getElementById('reportPotential');
+        const reportMechanical = document.getElementById('reportMechanical');
         const energyLossSpan = document.getElementById('energyLoss');
         const stepCounterSpan = document.getElementById('stepCounter');
+        const heightDisplay = document.getElementById('heightDisplay');
 
-        // 按钮
+        const kineticBar = document.getElementById('kineticBar');
+        const potentialBar = document.getElementById('potentialBar');
+        const mechanicalBar = document.getElementById('mechanicalBar');
+
         const resetBtn = document.getElementById('resetSimBtn');
         const exportReportBtn = document.getElementById('exportReportBtn');
         const exportQuestionBtn = document.getElementById('exportQuestionBtn');
@@ -495,19 +507,19 @@
         let damping = 0.02;
         let restitution = 0.85;
 
+        const GRAVITY = 0.45;
+        const GROUND_Y = 480;    // 地面 y
+        const LEFT_WALL = 50;
+        const RIGHT_WALL = 850;
+        const REF_HEIGHT = GROUND_Y - 40; // 参考零势能面 (地面)
+
         // 小球状态
         let ball = {
-            x: 200, y: 250,
-            vx: 3.0, vy: 0.6,
+            x: 240, y: 300,
+            vx: 3.0, vy: -0.8,
             radius: 18,
             mass: 1.0,
         };
-
-        // 边界 (基于canvas尺寸)
-        const W = 800, H = 500;
-        const GROUND_Y = 440;    // 地面高度 (y坐标)
-        const LEFT_WALL = 40;
-        const RIGHT_WALL = W - 40;
 
         let stepCount = 0;
         let initialEnergy = 0;
@@ -515,39 +527,69 @@
         let isDragging = false;
         let dragOffsetX = 0, dragOffsetY = 0;
 
-        // 重置模拟 (保留当前参数)
+        // 能量值 (用于显示)
+        let currentKinetic = 0;
+        let currentPotential = 0;
+        let currentMechanical = 0;
+
+        // ----- 重置模拟 -----
         function resetSimulation() {
-            // 读取最新滑块数值
             mass = parseFloat(massSlider.value);
             initialVelocity = parseFloat(velocitySlider.value);
             damping = parseFloat(dampingSlider.value);
             restitution = parseFloat(restitutionSlider.value);
 
             ball.mass = mass;
-            ball.radius = 16 + mass * 4;  // 视觉大小随质量变化
-            // 放在中间偏左，赋予初速度
-            ball.x = 180;
-            ball.y = GROUND_Y - ball.radius - 10;
+            ball.radius = 16 + mass * 3.5;
+            ball.x = 200;
+            ball.y = GROUND_Y - ball.radius - 20;
             ball.vx = initialVelocity * 0.9;
-            ball.vy = -1.2;   // 稍微向上
+            ball.vy = -1.5;
 
             stepCount = 0;
-            // 计算初始能量 (近似)
             const speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-            initialEnergy = 0.5 * mass * speed * speed;
+            const h = (GROUND_Y - ball.y) / 100;
+            initialEnergy = 0.5 * mass * speed * speed + mass * GRAVITY * h * 100;
             energyLoss = 0;
-            updateReport();
-            drawScene();
+            updateReportAndBars();
         }
 
-        // 更新报告UI
-        function updateReport() {
-            reportMass.textContent = mass.toFixed(2);
-            reportVel.textContent = initialVelocity.toFixed(2);
-            reportDamp.textContent = damping.toFixed(3);
-            reportRest.textContent = restitution.toFixed(2);
+        // ----- 更新报告 + 能量条 -----
+        function updateReportAndBars() {
+            // 高度 (m) 标度
+            const h = Math.max(0, (GROUND_Y - ball.y) / 100);
+            heightDisplay.textContent = h.toFixed(2);
+
+            // 速度
+            const v = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
+            currentKinetic = 0.5 * ball.mass * v * v;
+            // 势能 (以地面为零势能)
+            currentPotential = ball.mass * GRAVITY * h * 100; 
+            currentMechanical = currentKinetic + currentPotential;
+
+            reportKinetic.textContent = currentKinetic.toFixed(2);
+            reportPotential.textContent = currentPotential.toFixed(2);
+            reportMechanical.textContent = currentMechanical.toFixed(2);
+
+            // 能量损失 (相对于初始)
+            if (initialEnergy > 0.01) {
+                energyLoss = initialEnergy - currentMechanical;
+                if (energyLoss < 0) energyLoss = 0;
+            } else {
+                if (v > 0.1) initialEnergy = currentMechanical;
+            }
             energyLossSpan.textContent = energyLoss.toFixed(3);
             stepCounterSpan.textContent = stepCount;
+
+            // 能量条 (最大标度 30J 自适应)
+            const maxScale = Math.max(currentMechanical, 8, 1);
+            const kRatio = Math.min(currentKinetic / maxScale, 1);
+            const pRatio = Math.min(currentPotential / maxScale, 1);
+            const mRatio = Math.min(currentMechanical / maxScale, 1);
+
+            kineticBar.style.width = (kRatio * 100) + '%';
+            potentialBar.style.width = (pRatio * 100) + '%';
+            mechanicalBar.style.width = (mRatio * 100) + '%';
         }
 
         // 更新滑块数值显示
@@ -558,37 +600,30 @@
             restitutionVal.textContent = restitutionSlider.value;
         }
 
-        // ----- 物理更新 (简单欧拉) -----
+        // ----- 物理更新 (欧拉) -----
         function physicsUpdate() {
-            // 重力
-            const gravity = 0.35;
-            // 空气阻尼 (与速度正比)
             const dampCoeff = damping;
 
-            // 速度更新 (含阻尼)
-            ball.vx *= (1 - dampCoeff * 0.5);
-            ball.vy *= (1 - dampCoeff * 0.5);
-            ball.vy += gravity;
+            // 阻尼
+            ball.vx *= (1 - dampCoeff * 0.4);
+            ball.vy *= (1 - dampCoeff * 0.4);
+            ball.vy += GRAVITY;
 
-            // 位置更新
             ball.x += ball.vx;
             ball.y += ball.vy;
 
-            // 边界碰撞 (地面)
+            // 地面碰撞
             if (ball.y + ball.radius > GROUND_Y) {
                 ball.y = GROUND_Y - ball.radius;
-                // 法向恢复系数
-                if (ball.vy > 0.5) {
+                if (ball.vy > 0.3) {
                     ball.vy = -ball.vy * restitution;
-                    // 切向摩擦损失 (小量)
                     ball.vx *= 0.995;
                 } else {
-                    ball.vy = 0;  // 静止
+                    ball.vy = 0;
                 }
-                // 小量能量损失
             }
 
-            // 左右墙壁
+            // 墙壁
             if (ball.x - ball.radius < LEFT_WALL) {
                 ball.x = LEFT_WALL + ball.radius;
                 ball.vx = -ball.vx * restitution;
@@ -597,65 +632,74 @@
                 ball.vx = -ball.vx * restitution;
             }
 
-            // 防止球跑出顶部
-            if (ball.y - ball.radius < 10) {
-                ball.y = 10 + ball.radius;
+            // 天花板
+            if (ball.y - ball.radius < 20) {
+                ball.y = 20 + ball.radius;
                 ball.vy = -ball.vy * restitution;
             }
 
-            // 计算能量损失 (基于当前速度与初始能量)
+            // 能量损失更新
             const v = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-            const currentEnergy = 0.5 * ball.mass * v * v;
+            const h = (GROUND_Y - ball.y) / 100;
+            const currentE = 0.5 * ball.mass * v * v + ball.mass * GRAVITY * h * 100;
+            if (initialEnergy < 0.01 && v > 0.1) initialEnergy = currentE;
             if (initialEnergy > 0.01) {
-                energyLoss = initialEnergy - currentEnergy;
+                energyLoss = initialEnergy - currentE;
                 if (energyLoss < 0) energyLoss = 0;
-            } else {
-                // 初始能量很小则重新校准
-                if (v > 0.1) initialEnergy = 0.5 * ball.mass * v * v;
             }
 
             stepCount++;
-            updateReport();
+            updateReportAndBars();
         }
 
-        // ----- 绘图 -----
+        // ----- 绘图 (含能量可视化) -----
         function drawScene() {
-            ctx.clearRect(0, 0, W, H);
+            ctx.clearRect(0, 0, 900, 560);
 
-            // 渐变背景
-            const grad = ctx.createLinearGradient(0, 0, 0, H);
-            grad.addColorStop(0, '#dae8fc');
-            grad.addColorStop(0.7, '#c8daf0');
+            // 背景
+            const grad = ctx.createLinearGradient(0, 0, 0, 560);
+            grad.addColorStop(0, '#d4e4fc');
+            grad.addColorStop(0.7, '#c0d4ec');
             ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, W, H);
+            ctx.fillRect(0, 0, 900, 560);
 
             // 地面
-            ctx.fillStyle = '#7699b9';
+            ctx.fillStyle = '#6f92b0';
             ctx.shadowColor = 'rgba(0,0,0,0.1)';
             ctx.shadowBlur = 6;
-            ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+            ctx.fillRect(0, GROUND_Y, 900, 560 - GROUND_Y);
             ctx.shadowBlur = 0;
-
-            // 地面细节
-            ctx.strokeStyle = '#5b7f9e';
+            ctx.strokeStyle = '#4c6f8a';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(0, GROUND_Y);
-            ctx.lineTo(W, GROUND_Y);
+            ctx.lineTo(900, GROUND_Y);
             ctx.stroke();
 
             // 墙壁
-            ctx.fillStyle = '#b0c7de';
+            ctx.fillStyle = '#a8bfd8';
             ctx.shadowBlur = 4;
             ctx.fillRect(LEFT_WALL-6, 10, 6, GROUND_Y-10);
             ctx.fillRect(RIGHT_WALL, 10, 6, GROUND_Y-10);
             ctx.shadowBlur = 0;
 
-            // 绘制小球 (带光泽)
+            // 零势能参考线 (地面)
+            ctx.strokeStyle = '#3a6a8a';
+            ctx.setLineDash([4, 6]);
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(LEFT_WALL-2, GROUND_Y);
+            ctx.lineTo(RIGHT_WALL+2, GROUND_Y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#2f5370';
+            ctx.font = '11px "Segoe UI"';
+            ctx.fillText('零势能面 (地面)', RIGHT_WALL-100, GROUND_Y-6);
+
+            // 绘制小球
             const r = ball.radius;
             ctx.shadowColor = 'rgba(0,0,0,0.25)';
             ctx.shadowBlur = 14;
-            // 主体
             const gradient = ctx.createRadialGradient(
                 ball.x - 6, ball.y - 6, r*0.1,
                 ball.x, ball.y, r
@@ -667,30 +711,52 @@
             ctx.beginPath();
             ctx.arc(ball.x, ball.y, r, 0, Math.PI * 2);
             ctx.fill();
-            // 高光
             ctx.shadowBlur = 6;
-            ctx.fillStyle = 'rgba(255,255,230,0.4)';
+            ctx.fillStyle = 'rgba(255,255,230,0.35)';
             ctx.beginPath();
             ctx.arc(ball.x-5, ball.y-7, r*0.25, 0, Math.PI*2);
             ctx.fill();
 
-            // 速度向量指示
+            // 速度箭头
             ctx.shadowBlur = 0;
             ctx.strokeStyle = '#1f3a5e';
             ctx.lineWidth = 2.5;
             ctx.beginPath();
             ctx.moveTo(ball.x, ball.y);
-            ctx.lineTo(ball.x + ball.vx * 6, ball.y + ball.vy * 6);
+            ctx.lineTo(ball.x + ball.vx * 5, ball.y + ball.vy * 5);
             ctx.stroke();
             ctx.fillStyle = '#1f3a5e';
             ctx.font = '12px "Segoe UI"';
-            ctx.fillText('v', ball.x + ball.vx * 6 + 6, ball.y + ball.vy * 6 - 4);
+            ctx.fillText('v', ball.x + ball.vx * 5 + 6, ball.y + ball.vy * 5 - 4);
 
-            // 信息水印
-            ctx.fillStyle = '#3a5d7a';
-            ctx.font = '12px "Segoe UI"';
-            ctx.fillText(`m = ${ball.mass.toFixed(2)} kg`, 20, 30);
-            ctx.fillText(`步数: ${stepCount}`, 20, 50);
+            // 显示高度
+            ctx.fillStyle = '#1f3a5e';
+            ctx.font = '13px "Segoe UI"';
+            ctx.fillText(`h = ${((GROUND_Y - ball.y)/100).toFixed(2)} m`, 20, 30);
+            ctx.fillText(`m = ${ball.mass.toFixed(2)} kg`, 20, 50);
+
+            // 小能量条 (画布左侧)
+            const barX = 20, barY = 70, barW = 14, maxH = 140;
+            const maxE = Math.max(currentMechanical, 5);
+            const drawBar = (x, y, ratio, color) => {
+                const h = Math.min(ratio, 1) * maxH;
+                ctx.fillStyle = '#d0dbe8';
+                ctx.fillRect(x, y, barW, maxH);
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y + maxH - h, barW, h);
+                ctx.strokeStyle = '#8a9fb0';
+                ctx.lineWidth = 0.8;
+                ctx.strokeRect(x, y, barW, maxH);
+            };
+            drawBar(barX, barY, currentKinetic / maxE, '#e67e22');
+            drawBar(barX+20, barY, currentPotential / maxE, '#2e86de');
+            drawBar(barX+40, barY, currentMechanical / maxE, '#27ae60');
+            ctx.fillStyle = '#1f3a5e';
+            ctx.font = '9px "Segoe UI"';
+            ctx.fillText('Ek', barX+2, barY-6);
+            ctx.fillText('Ep', barX+22, barY-6);
+            ctx.fillText('E', barX+42, barY-6);
+
             ctx.shadowBlur = 0;
         }
 
@@ -701,7 +767,7 @@
             requestAnimationFrame(animate);
         }
 
-        // ----- 滑块事件绑定 (更新参数) -----
+        // ----- 滑块事件 -----
         function onSliderChange() {
             mass = parseFloat(massSlider.value);
             initialVelocity = parseFloat(velocitySlider.value);
@@ -709,15 +775,13 @@
             restitution = parseFloat(restitutionSlider.value);
 
             ball.mass = mass;
-            ball.radius = 16 + mass * 4;
-            // 更新初速度显示，并重置能量基准
-            const speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-            if (speed > 0.1) {
-                initialEnergy = 0.5 * mass * speed * speed;
-            }
+            ball.radius = 16 + mass * 3.5;
+            const v = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
+            const h = (GROUND_Y - ball.y) / 100;
+            if (v > 0.1) initialEnergy = 0.5 * mass * v * v + mass * GRAVITY * h * 100;
 
             updateSlidersDisplay();
-            updateReport();
+            updateReportAndBars();
         }
 
         massSlider.addEventListener('input', onSliderChange);
@@ -725,10 +789,9 @@
         dampingSlider.addEventListener('input', onSliderChange);
         restitutionSlider.addEventListener('input', onSliderChange);
 
-        // 重置
         resetBtn.addEventListener('click', resetSimulation);
 
-        // ----- 拖拽交互 (鼠标) -----
+        // ----- 拖拽交互 -----
         function getMousePos(e) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
@@ -752,7 +815,7 @@
             const pos = getMousePos(e);
             const dx = pos.x - ball.x;
             const dy = pos.y - ball.y;
-            if (dx*dx + dy*dy < (ball.radius + 20) ** 2) {
+            if (dx*dx + dy*dy < (ball.radius + 22) ** 2) {
                 isDragging = true;
                 dragOffsetX = dx;
                 dragOffsetY = dy;
@@ -766,18 +829,16 @@
             const pos = getMousePos(e);
             let newX = pos.x - dragOffsetX;
             let newY = pos.y - dragOffsetY;
-            // 边界约束
             newX = Math.min(RIGHT_WALL - ball.radius, Math.max(LEFT_WALL + ball.radius, newX));
-            newY = Math.min(GROUND_Y - ball.radius, Math.max(10 + ball.radius, newY));
+            newY = Math.min(GROUND_Y - ball.radius, Math.max(20 + ball.radius, newY));
             ball.x = newX;
             ball.y = newY;
-            // 拖拽时速度归零
             ball.vx = 0;
             ball.vy = 0;
             initialEnergy = 0;
             energyLoss = 0;
             stepCount = 0;
-            updateReport();
+            updateReportAndBars();
             drawScene();
             e.preventDefault();
         }
@@ -786,41 +847,44 @@
             if (isDragging) {
                 isDragging = false;
                 canvas.style.cursor = 'grab';
-                // 稍微赋一个随机初速度, 让球动起来
-                ball.vx = (Math.random() - 0.5) * 2;
-                ball.vy = -1.5;
-                const speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-                if (speed > 0.1) initialEnergy = 0.5 * ball.mass * speed * speed;
+                ball.vx = (Math.random() - 0.5) * 1.5;
+                ball.vy = -1.2;
+                const v = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
+                const h = (GROUND_Y - ball.y) / 100;
+                if (v > 0.1) initialEnergy = 0.5 * ball.mass * v * v + ball.mass * GRAVITY * h * 100;
                 stepCount = 0;
-                updateReport();
+                updateReportAndBars();
                 e.preventDefault();
             }
         }
 
-        // 鼠标事件
         canvas.addEventListener('mousedown', onPointerDown);
         window.addEventListener('mousemove', onPointerMove);
         window.addEventListener('mouseup', onPointerUp);
-        // 触摸事件
         canvas.addEventListener('touchstart', onPointerDown, {passive: false});
         window.addEventListener('touchmove', onPointerMove, {passive: false});
         window.addEventListener('touchend', onPointerUp, {passive: false});
 
-        // ----- 导出按钮 (模拟付费) -----
+        // ----- 导出 (付费模拟) -----
         function handleExport(type) {
-            const reportText = `物理沙盒实验报告
+            const h = ((GROUND_Y - ball.y) / 100).toFixed(2);
+            const v = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy).toFixed(2);
+            const reportText = `📐 高中物理实验报告
             ==========================
-            质量: ${mass.toFixed(2)} kg
-            初速度: ${initialVelocity.toFixed(2)} m/s
-            阻尼系数: ${damping.toFixed(3)}
-            恢复系数: ${restitution.toFixed(2)}
-            当前能量损失: ${energyLoss.toFixed(3)} J
+            质量 m = ${mass.toFixed(2)} kg
+            初速度 v₀ = ${initialVelocity.toFixed(2)} m/s
+            阻尼 b = ${damping.toFixed(3)}
+            恢复系数 e = ${restitution.toFixed(2)}
+            ---------------------------------
+            当前高度 h = ${h} m
+            速度 v = ${v} m/s
+            动能 Ek = ${currentKinetic.toFixed(2)} J
+            势能 Ep = ${currentPotential.toFixed(2)} J
+            机械能 E = ${currentMechanical.toFixed(2)} J
+            能量损失 ΔE = ${energyLoss.toFixed(3)} J
             模拟步数: ${stepCount}
-            小球位置: (${ball.x.toFixed(1)}, ${ball.y.toFixed(1)})
-            速度: (${ball.vx.toFixed(2)}, ${ball.vy.toFixed(2)})
             ==========================
-            【付费导出】专业版功能
-            如需完整报告/题目，请订阅。`;
+            【付费导出】完整版含图表与习题解析`;
 
             if (type === 'report') {
                 alert('🔒 付费功能：导出完整报告 (PDF/Word)\n\n' + reportText + '\n\n(演示弹窗，实际付款后生成)');
@@ -832,9 +896,8 @@
         exportReportBtn.addEventListener('click', () => handleExport('report'));
         exportQuestionBtn.addEventListener('click', () => handleExport('question'));
 
-        // 初始化
+        // ----- 初始化 -----
         resetSimulation();
-        // 启动动画
         animate();
     })();
 </script>
