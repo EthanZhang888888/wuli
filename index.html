@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>物理沙盒 · 高中实验台</title>
+    <title>物理沙盒 · 双模型</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* ===== 全局样式 ===== */
         * {
             margin: 0;
             padding: 0;
@@ -69,6 +70,8 @@
             border: 1px solid rgba(255, 215, 120, 0.5);
         }
         .badge-pro i { font-size: 1rem; }
+
+        /* ===== 主布局 ===== */
         .main-layout {
             display: grid;
             grid-template-columns: 1fr 370px;
@@ -77,6 +80,8 @@
         @media (max-width: 920px) {
             .main-layout { grid-template-columns: 1fr; gap: 30px; }
         }
+
+        /* ===== 实验台 ===== */
         .experiment-stage {
             background: #ffffffd9;
             backdrop-filter: blur(4px);
@@ -109,6 +114,34 @@
             font-size: 0.8rem;
             color: #1f4a7a;
         }
+
+        /* 模型选择器 */
+        .model-selector {
+            background: #e8f0fe;
+            border-radius: 60px;
+            border: 1px solid #b8cee8;
+            display: flex;
+            overflow: hidden;
+        }
+        .model-selector button {
+            background: transparent;
+            border: none;
+            padding: 6px 16px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #1f3a57;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .model-selector button.active {
+            background: #1f4f8a;
+            color: white;
+        }
+        .model-selector button:hover:not(.active) {
+            background: #d4e4fc;
+        }
+
+        /* 开关按钮通用 */
         .ideal-toggle {
             display: flex;
             align-items: center;
@@ -153,6 +186,7 @@
         }
         .ideal-toggle.active .toggle-switch { background: #1f6cb0; }
         .ideal-toggle.active .toggle-switch::after { left: 20px; }
+
         .ctrl-btn {
             background: #e8f0fe;
             border: none;
@@ -174,6 +208,49 @@
             border-color: #e8a85c;
             color: #8a5a1a;
         }
+
+        .trajectory-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #e8f0fe;
+            padding: 6px 16px 6px 20px;
+            border-radius: 60px;
+            border: 1px solid #b8cee8;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #1f3a57;
+            cursor: pointer;
+            transition: 0.2s;
+            user-select: none;
+        }
+        .trajectory-toggle i { font-size: 1rem; color: #2b6a9e; }
+        .trajectory-toggle.active {
+            background: #d4e4fc;
+            border-color: #4f8fc9;
+            box-shadow: 0 0 0 2px rgba(30, 100, 180, 0.2);
+        }
+        .trajectory-toggle .toggle-switch { width: 34px; height: 20px; }
+        .trajectory-toggle .toggle-switch::after { width: 16px; height: 16px; }
+        .trajectory-toggle.active .toggle-switch::after { left: 16px; }
+
+        .reset-btn {
+            background: #e3ecf9;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 60px;
+            font-weight: 500;
+            color: #1f4a7a;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid transparent;
+        }
+        .reset-btn:hover { background: #d0e2f7; border-color: #8eb3d9; }
+
+        /* ===== Canvas ===== */
         .canvas-wrapper {
             background: #eaf1fb;
             border-radius: 24px;
@@ -191,6 +268,8 @@
             cursor: grab;
         }
         #physicsCanvas:active { cursor: grabbing; }
+
+        /* ===== 参数控制 ===== */
         .controls-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -254,21 +333,8 @@
             margin-top: 2px;
             border: 1px solid #d0def0;
         }
-        .reset-btn {
-            background: #e3ecf9;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 60px;
-            font-weight: 500;
-            color: #1f4a7a;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: 0.2s;
-            border: 1px solid transparent;
-        }
-        .reset-btn:hover { background: #d0e2f7; border-color: #8eb3d9; }
+
+        /* ===== 右侧报告 ===== */
         .report-sidebar {
             background: #ffffffdd;
             backdrop-filter: blur(8px);
@@ -308,6 +374,7 @@
         }
         .status-badge.running { background: #27ae60; color: white; }
         .status-badge.paused { background: #e67e22; color: white; }
+
         .report-content {
             flex: 1;
             background: #f4faff;
@@ -334,6 +401,7 @@
             font-weight: 600;
             color: #00337a;
         }
+
         .energy-bar-wrap {
             background: #dce5f0;
             border-radius: 30px;
@@ -352,6 +420,8 @@
         .energy-bar-fill.kinetic { background: #e67e22; }
         .energy-bar-fill.potential { background: #2e86de; }
         .energy-bar-fill.mechanical { background: #27ae60; }
+
+        /* ===== 导出按钮 ===== */
         .action-buttons {
             display: flex;
             flex-direction: column;
@@ -388,6 +458,7 @@
         }
         .btn-outline { background: transparent; border: 1px solid #b6cee9; }
         .btn-outline:hover { background: #e7f0fd; border-color: #8eb3db; }
+
         .footnote {
             margin-top: 16px;
             font-size: 0.75rem;
@@ -404,30 +475,6 @@
             border-radius: 40px;
             margin-left: 6px;
         }
-        .trajectory-toggle {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: #e8f0fe;
-            padding: 6px 16px 6px 20px;
-            border-radius: 60px;
-            border: 1px solid #b8cee8;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: #1f3a57;
-            cursor: pointer;
-            transition: 0.2s;
-            user-select: none;
-        }
-        .trajectory-toggle i { font-size: 1rem; color: #2b6a9e; }
-        .trajectory-toggle.active {
-            background: #d4e4fc;
-            border-color: #4f8fc9;
-            box-shadow: 0 0 0 2px rgba(30, 100, 180, 0.2);
-        }
-        .trajectory-toggle .toggle-switch { width: 34px; height: 20px; }
-        .trajectory-toggle .toggle-switch::after { width: 16px; height: 16px; }
-        .trajectory-toggle.active .toggle-switch::after { left: 16px; }
         @media (max-width: 600px) {
             .sandbox-container { padding: 14px; }
             .header h1 { font-size: 1.4rem; }
@@ -437,21 +484,36 @@
 <body>
 
 <div class="sandbox-container">
+    <!-- ===== 头部 ===== -->
     <div class="header">
-        <h1><i class="fas fa-flask"></i> 物理沙盒 · 高中实验台</h1>
+        <h1><i class="fas fa-flask"></i> 物理沙盒 · 双模型</h1>
         <div class="badge-pro"><i class="fas fa-crown"></i> 专业版 · 报告导出</div>
     </div>
 
+    <!-- ===== 主布局 ===== -->
     <div class="main-layout">
+        <!-- 左侧：实验台 -->
         <div class="experiment-stage">
             <div class="stage-title">
                 <div class="left-group">
                     <span><i class="fas fa-arrow-pointer" style="margin-right: 6px;"></i> 拖拽小球 · 探究能量</span>
+
+                    <!-- 模型切换 -->
+                    <div class="model-selector" id="modelSelector">
+                        <button class="active" data-model="bounce">自由落体</button>
+                        <button data-model="pendulum">单摆</button>
+                    </div>
+
+                    <!-- 理想开关 -->
                     <div class="ideal-toggle" id="idealToggle">
                         <i class="fas fa-star"></i> 理想
                         <div class="toggle-switch"></div>
                     </div>
+
+                    <!-- 暂停 -->
                     <button class="ctrl-btn" id="pauseBtn"><i class="fas fa-pause"></i> 暂停</button>
+
+                    <!-- 轨迹 -->
                     <div class="trajectory-toggle" id="trajectoryToggle">
                         <i class="fas fa-wave-square"></i> 轨迹
                         <div class="toggle-switch"></div>
@@ -460,23 +522,44 @@
                 <button class="reset-btn" id="resetSimBtn"><i class="fas fa-rotate-right"></i> 重置</button>
             </div>
 
+            <!-- Canvas -->
             <div class="canvas-wrapper">
                 <canvas id="physicsCanvas" width="900" height="560"></canvas>
             </div>
 
-            <div class="controls-grid">
+            <!-- 参数控制 -->
+            <div class="controls-grid" id="controlsGrid">
+                <!-- 通用：质量 -->
                 <div class="param-item">
                     <label><i class="fas fa-weight-scale"></i> 质量 m <span class="param-value" id="massVal">1.0</span></label>
                     <input type="range" id="massSlider" min="0.3" max="3.0" step="0.1" value="1.0">
                 </div>
-                <div class="param-item">
+
+                <!-- 自由落体专用：初速度 -->
+                <div class="param-item" id="paramVelocity">
                     <label><i class="fas fa-arrow-right"></i> 初速度 v₀ <span class="param-value" id="velVal">3.0</span></label>
                     <input type="range" id="velocitySlider" min="0.0" max="6.0" step="0.2" value="3.0">
                 </div>
+
+                <!-- 单摆专用：摆角 -->
+                <div class="param-item" id="paramAngle" style="display:none;">
+                    <label><i class="fas fa-arrows-spin"></i> 摆角 θ <span class="param-value" id="angleVal">30</span>°</label>
+                    <input type="range" id="angleSlider" min="5" max="75" step="1" value="30">
+                </div>
+
+                <!-- 单摆专用：摆长 -->
+                <div class="param-item" id="paramLength" style="display:none;">
+                    <label><i class="fas fa-ruler"></i> 摆长 L <span class="param-value" id="lengthVal">1.5</span> m</label>
+                    <input type="range" id="lengthSlider" min="0.5" max="2.5" step="0.05" value="1.5">
+                </div>
+
+                <!-- 通用：阻尼 -->
                 <div class="param-item">
                     <label><i class="fas fa-droplet"></i> 阻尼 b <span class="param-value" id="dampVal">0.02</span></label>
                     <input type="range" id="dampingSlider" min="0.00" max="0.10" step="0.002" value="0.02">
                 </div>
+
+                <!-- 通用：恢复系数 -->
                 <div class="param-item">
                     <label><i class="fas fa-arrows-spin"></i> 恢复系数 e <span class="param-value" id="restitutionVal">0.85</span></label>
                     <input type="range" id="restitutionSlider" min="0.30" max="1.00" step="0.01" value="0.85">
@@ -484,6 +567,7 @@
             </div>
         </div>
 
+        <!-- 右侧：报告 -->
         <div class="report-sidebar">
             <h3><i class="fas fa-file-pen"></i> 实验报告 <span id="modeIndicator" class="mode-badge" style="background:#27ae60;">实际</span></h3>
             <div class="report-meta">
@@ -505,7 +589,8 @@
                     <span>损失 ΔE</span> <span class="highlight" id="energyLoss">0.000</span> J
                 </p>
                 <p><span>模拟步数</span> <span class="highlight" id="stepCounter">0</span></p>
-                <p><span>高度 h</span> <span class="highlight" id="heightDisplay">0.00</span> m</p>
+                <p><span id="heightLabel">高度 h</span> <span class="highlight" id="heightDisplay">0.00</span> m</p>
+                <p id="angleDisplayRow" style="display:none;"><span>摆角 θ</span> <span class="highlight" id="angleDisplay">0.0</span>°</p>
             </div>
 
             <div class="action-buttons">
@@ -524,7 +609,9 @@
 
 <script>
     (function() {
-        // ----- DOM 元素 -----
+        // ============================================================
+        //  1. DOM 元素
+        // ============================================================
         const canvas = document.getElementById('physicsCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -532,11 +619,15 @@
         const velocitySlider = document.getElementById('velocitySlider');
         const dampingSlider = document.getElementById('dampingSlider');
         const restitutionSlider = document.getElementById('restitutionSlider');
+        const angleSlider = document.getElementById('angleSlider');
+        const lengthSlider = document.getElementById('lengthSlider');
 
         const massVal = document.getElementById('massVal');
         const velVal = document.getElementById('velVal');
         const dampVal = document.getElementById('dampVal');
         const restitutionVal = document.getElementById('restitutionVal');
+        const angleVal = document.getElementById('angleVal');
+        const lengthVal = document.getElementById('lengthVal');
 
         const reportKinetic = document.getElementById('reportKinetic');
         const reportPotential = document.getElementById('reportPotential');
@@ -544,6 +635,9 @@
         const energyLossSpan = document.getElementById('energyLoss');
         const stepCounterSpan = document.getElementById('stepCounter');
         const heightDisplay = document.getElementById('heightDisplay');
+        const heightLabel = document.getElementById('heightLabel');
+        const angleDisplay = document.getElementById('angleDisplay');
+        const angleDisplayRow = document.getElementById('angleDisplayRow');
 
         const kineticBar = document.getElementById('kineticBar');
         const potentialBar = document.getElementById('potentialBar');
@@ -557,29 +651,44 @@
         const pauseBtn = document.getElementById('pauseBtn');
         const statusBadge = document.getElementById('statusBadge');
         const trajectoryToggle = document.getElementById('trajectoryToggle');
+        const modelSelector = document.getElementById('modelSelector');
 
-        // ----- 状态 -----
+        // ============================================================
+        //  2. 状态
+        // ============================================================
+        let currentModel = 'bounce';   // 'bounce' | 'pendulum'
         let isPaused = false;
         let showTrajectory = false;
         let trajectoryPoints = [];
 
-        // ----- 物理参数 -----
         let mass = 1.0;
         let initialVelocity = 3.0;
         let damping = 0.02;
         let restitution = 0.85;
         let isIdealMode = false;
+        let pendulumAngle = 30;        // 度
+        let pendulumLength = 1.5;      // 米
 
         const GRAVITY = 0.45;
         const GROUND_Y = 480;
         const LEFT_WALL = 50;
         const RIGHT_WALL = 850;
+        const PENDULUM_PIVOT_X = 450;
+        const PENDULUM_PIVOT_Y = 70;
 
+        // 小球
         let ball = {
             x: 240, y: 300,
             vx: 3.0, vy: -0.8,
             radius: 18,
             mass: 1.0,
+        };
+
+        // 单摆状态
+        let pendulumState = {
+            angle: 0,
+            omega: 0,
+            length: 150,   // 像素
         };
 
         let stepCount = 0;
@@ -588,25 +697,53 @@
         let isDragging = false;
         let dragOffsetX = 0, dragOffsetY = 0;
 
-        // 显示缓存 - 用于保证单调递减
+        // 显示缓存（保证单调递减）
         let displayKinetic = 0;
         let displayPotential = 0;
         let displayMechanical = 0;
         let displayLoss = 0;
         let isStopped = false;
 
-        // ----- 静止阈值 -----
         const REST_THRESHOLD = 0.02;
         const ZERO_THRESHOLD = 0.04;
 
-        // ----- 判断小球是否静止 -----
+        // ============================================================
+        //  3. 模型切换
+        // ============================================================
+        function switchModel(model) {
+            currentModel = model;
+            // 更新按钮
+            document.querySelectorAll('.model-selector button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.model === model);
+            });
+            // 显示/隐藏参数
+            document.getElementById('paramVelocity').style.display = model === 'bounce' ? '' : 'none';
+            document.getElementById('paramAngle').style.display = model === 'pendulum' ? '' : 'none';
+            document.getElementById('paramLength').style.display = model === 'pendulum' ? '' : 'none';
+            // 标签
+            heightLabel.textContent = model === 'bounce' ? '高度 h' : '高度 h (相对最低点)';
+            angleDisplayRow.style.display = model === 'pendulum' ? '' : 'none';
+            // 重置
+            isStopped = false;
+            resetSimulation();
+        }
+
+        modelSelector.addEventListener('click', function(e) {
+            const btn = e.target.closest('button');
+            if (btn && btn.dataset.model) {
+                switchModel(btn.dataset.model);
+            }
+        });
+
+        // ============================================================
+        //  4. 核心物理函数
+        // ============================================================
         function isBallAtRest() {
             const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
             const onGround = (ball.y + ball.radius >= GROUND_Y - 0.5);
             return onGround && speedSq < REST_THRESHOLD;
         }
 
-        // ----- 强制小球静止 -----
         function forceBallRest() {
             ball.vx = 0;
             ball.vy = 0;
@@ -616,48 +753,27 @@
             displayPotential = 0;
             displayMechanical = 0;
             displayLoss = initialMechanicalEnergy;
-        }
-
-        // ----- 轨迹开关 -----
-        trajectoryToggle.addEventListener('click', function(e) {
-            e.stopPropagation();
-            showTrajectory = !showTrajectory;
-            if (showTrajectory) {
-                trajectoryToggle.classList.add('active');
-                trajectoryPoints = [];
-            } else {
-                trajectoryToggle.classList.remove('active');
-                trajectoryPoints = [];
-            }
-        });
-
-        // ----- 暂停控制 -----
-        function togglePause() {
-            isPaused = !isPaused;
-            if (isPaused) {
-                pauseBtn.innerHTML = '<i class="fas fa-play"></i> 继续';
-                pauseBtn.classList.add('paused');
-                statusBadge.innerHTML = '<i class="fas fa-pause"></i> 已暂停';
-                statusBadge.className = 'status-badge paused';
-            } else {
-                pauseBtn.innerHTML = '<i class="fas fa-pause"></i> 暂停';
-                pauseBtn.classList.remove('paused');
-                statusBadge.innerHTML = '<i class="fas fa-play"></i> 运行中';
-                statusBadge.className = 'status-badge running';
+            if (currentModel === 'pendulum') {
+                pendulumState.omega = 0;
             }
         }
-        pauseBtn.addEventListener('click', togglePause);
 
         // ----- 计算机械能 -----
         function calcMechanicalEnergy(ballState) {
             const v = Math.sqrt(ballState.vx * ballState.vx + ballState.vy * ballState.vy);
-            const h = Math.max(0, (GROUND_Y - ballState.y - ballState.radius) / 100);
+            let h;
+            if (currentModel === 'pendulum') {
+                const len = pendulumState.length;
+                const angle = pendulumState.angle;
+                h = len * (1 - Math.cos(angle)) / 100;
+            } else {
+                h = Math.max(0, (GROUND_Y - ballState.y - ballState.radius) / 100);
+            }
             const kinetic = 0.5 * ballState.mass * v * v;
             const potential = ballState.mass * GRAVITY * h * 100;
             return { kinetic, potential, total: kinetic + potential };
         }
 
-        // ----- 更新初始能量 -----
         function updateInitialEnergy() {
             const energy = calcMechanicalEnergy(ball);
             initialMechanicalEnergy = energy.total;
@@ -668,7 +784,9 @@
             isStopped = false;
         }
 
-        // ----- 重置模拟 -----
+        // ============================================================
+        //  5. 重置
+        // ============================================================
         function resetSimulation() {
             mass = parseFloat(massSlider.value);
             initialVelocity = parseFloat(velocitySlider.value);
@@ -682,10 +800,23 @@
 
             ball.mass = mass;
             ball.radius = 16 + mass * 3.5;
-            ball.x = 200;
-            ball.y = GROUND_Y - ball.radius - 20;
-            ball.vx = initialVelocity * 0.9;
-            ball.vy = -1.5;
+
+            if (currentModel === 'bounce') {
+                ball.x = 200;
+                ball.y = GROUND_Y - ball.radius - 20;
+                ball.vx = initialVelocity * 0.9;
+                ball.vy = -1.5;
+            } else {
+                const angleRad = parseFloat(angleSlider.value) * Math.PI / 180;
+                const len = parseFloat(lengthSlider.value) * 100;
+                pendulumState.length = len;
+                pendulumState.angle = angleRad;
+                pendulumState.omega = 0;
+                ball.x = PENDULUM_PIVOT_X + len * Math.sin(angleRad);
+                ball.y = PENDULUM_PIVOT_Y + len * Math.cos(angleRad);
+                ball.vx = 0;
+                ball.vy = 0;
+            }
 
             stepCount = 0;
             trajectoryPoints = [];
@@ -693,35 +824,159 @@
             updateReportAndBars();
         }
 
-        // ----- 更新报告 (保证单调递减) -----
+        // ============================================================
+        //  6. 单摆物理更新
+        // ============================================================
+        function updatePendulum() {
+            const len = pendulumState.length;
+            const g = GRAVITY * 100;
+            const dampCoeff = isIdealMode ? 0 : damping;
+
+            const alpha = -(g / len) * Math.sin(pendulumState.angle) - dampCoeff * pendulumState.omega;
+            pendulumState.omega += alpha;
+            if (!isIdealMode) {
+                pendulumState.omega *= (1 - dampCoeff * 0.4);
+            }
+            pendulumState.angle += pendulumState.omega;
+
+            ball.x = PENDULUM_PIVOT_X + len * Math.sin(pendulumState.angle);
+            ball.y = PENDULUM_PIVOT_Y + len * Math.cos(pendulumState.angle);
+
+            const speed = len * Math.abs(pendulumState.omega);
+            const angle = pendulumState.angle;
+            ball.vx = speed * Math.cos(angle);
+            ball.vy = -speed * Math.sin(angle);
+
+            if (Math.abs(pendulumState.angle) < 0.005 && Math.abs(pendulumState.omega) < 0.001) {
+                pendulumState.angle = 0;
+                pendulumState.omega = 0;
+                ball.vx = 0;
+                ball.vy = 0;
+                ball.x = PENDULUM_PIVOT_X;
+                ball.y = PENDULUM_PIVOT_Y + len;
+            }
+        }
+
+        // ============================================================
+        //  7. 物理更新
+        // ============================================================
+        function physicsUpdate() {
+            if (isPaused) return;
+            if (isStopped) return;
+
+            if (currentModel === 'pendulum') {
+                updatePendulum();
+                if (showTrajectory && stepCount % 2 === 0) {
+                    trajectoryPoints.push({ x: ball.x, y: ball.y });
+                    if (trajectoryPoints.length > 3000) trajectoryPoints.splice(0, 100);
+                }
+                stepCount++;
+                updateReportAndBars();
+                return;
+            }
+
+            // ----- 自由落体 -----
+            let dampCoeff = isIdealMode ? 0 : damping;
+            let restCoeff = isIdealMode ? 1.0 : restitution;
+
+            if (!isIdealMode) {
+                ball.vx *= (1 - dampCoeff * 0.4);
+                ball.vy *= (1 - dampCoeff * 0.4);
+            }
+            ball.vy += GRAVITY;
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            if (ball.y + ball.radius > GROUND_Y) {
+                ball.y = GROUND_Y - ball.radius;
+                if (Math.abs(ball.vy) > 0.05) {
+                    ball.vy = -ball.vy * restCoeff;
+                    if (!isIdealMode) ball.vx *= (1 - dampCoeff * 0.2);
+                } else {
+                    ball.vy = 0;
+                }
+            }
+
+            if (ball.x - ball.radius < LEFT_WALL) {
+                ball.x = LEFT_WALL + ball.radius;
+                ball.vx = -ball.vx * restCoeff;
+            } else if (ball.x + ball.radius > RIGHT_WALL) {
+                ball.x = RIGHT_WALL - ball.radius;
+                ball.vx = -ball.vx * restCoeff;
+            }
+
+            if (ball.y - ball.radius < 20) {
+                ball.y = 20 + ball.radius;
+                ball.vy = -ball.vy * restCoeff;
+            }
+
+            const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
+            if (!isIdealMode && speedSq < REST_THRESHOLD) {
+                ball.vx = 0;
+                ball.vy = 0;
+                if (ball.y + ball.radius > GROUND_Y - 1) ball.y = GROUND_Y - ball.radius;
+            }
+
+            if (showTrajectory && stepCount % 2 === 0) {
+                trajectoryPoints.push({ x: ball.x, y: ball.y });
+                if (trajectoryPoints.length > 3000) trajectoryPoints.splice(0, 100);
+            }
+
+            stepCount++;
+            updateReportAndBars();
+        }
+
+        // ============================================================
+        //  8. 报告更新
+        // ============================================================
         function updateReportAndBars() {
-            // 如果已经停止，保持归零状态
             if (isStopped) {
                 updateDisplay(0, 0, 0, initialMechanicalEnergy);
                 return;
             }
 
-            // 检查是否静止
-            if (!isIdealMode && isBallAtRest()) {
+            // 自由落体静止检测
+            if (!isIdealMode && currentModel === 'bounce' && isBallAtRest()) {
                 forceBallRest();
                 updateDisplay(0, 0, 0, initialMechanicalEnergy);
                 return;
             }
 
-            // 正常计算
+            // 单摆静止检测
+            if (currentModel === 'pendulum' && !isIdealMode) {
+                if (Math.abs(pendulumState.angle) < 0.005 && Math.abs(pendulumState.omega) < 0.001) {
+                    pendulumState.angle = 0;
+                    pendulumState.omega = 0;
+                    ball.vx = 0;
+                    ball.vy = 0;
+                    ball.x = PENDULUM_PIVOT_X;
+                    ball.y = PENDULUM_PIVOT_Y + pendulumState.length;
+                    isStopped = true;
+                    displayKinetic = 0;
+                    displayPotential = 0;
+                    displayMechanical = 0;
+                    displayLoss = initialMechanicalEnergy;
+                    updateDisplay(0, 0, 0, initialMechanicalEnergy);
+                    return;
+                }
+            }
+
             let energy = calcMechanicalEnergy(ball);
             let rawKinetic = energy.kinetic;
             let rawPotential = energy.potential;
             let rawMechanical = energy.total;
 
-            // 理想模式：能量守恒修正
             if (isIdealMode) {
                 const diff = rawMechanical - initialMechanicalEnergy;
                 if (Math.abs(diff) > 1e-8 && initialMechanicalEnergy > 0) {
                     const scale = Math.sqrt((initialMechanicalEnergy - rawPotential) / Math.max(rawKinetic, 1e-10));
                     if (isFinite(scale) && scale > 0 && scale < 10) {
-                        ball.vx *= scale;
-                        ball.vy *= scale;
+                        if (currentModel === 'bounce') {
+                            ball.vx *= scale;
+                            ball.vy *= scale;
+                        } else {
+                            pendulumState.omega *= scale;
+                        }
                         const newEnergy = calcMechanicalEnergy(ball);
                         rawKinetic = newEnergy.kinetic;
                         rawPotential = newEnergy.potential;
@@ -733,25 +988,13 @@
                 energyLoss = Math.max(0, initialMechanicalEnergy - rawMechanical);
             }
 
-            // 二次检查：防止浮点误差
-            const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
-            if (!isIdealMode && speedSq < REST_THRESHOLD && ball.y + ball.radius >= GROUND_Y - 0.5) {
-                forceBallRest();
-                updateDisplay(0, 0, 0, initialMechanicalEnergy);
-                return;
-            }
-
-            // 更新显示值 - 保证单调递减
-            // 机械能只能减小（实际模式）或保持不变（理想模式）
+            // 实际模式：单调递减 + 截断
             if (!isIdealMode) {
-                // 实际模式：机械能单调递减
                 if (rawMechanical > displayMechanical && displayMechanical > 0.001) {
-                    // 如果计算值比显示值大（浮点误差导致），保持显示值不变
                     rawMechanical = displayMechanical;
                     rawKinetic = displayKinetic;
                     rawPotential = displayPotential;
                 }
-                // 如果机械能小于阈值，直接归零
                 if (rawMechanical < ZERO_THRESHOLD) {
                     forceBallRest();
                     updateDisplay(0, 0, 0, initialMechanicalEnergy);
@@ -767,9 +1010,17 @@
             updateDisplay(displayKinetic, displayPotential, displayMechanical, displayLoss);
         }
 
-        // ----- 统一显示更新 -----
         function updateDisplay(kinetic, potential, mechanical, loss) {
-            const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
+            let h, angleDeg = 0;
+            if (currentModel === 'pendulum') {
+                const len = pendulumState.length;
+                const angle = pendulumState.angle;
+                h = len * (1 - Math.cos(angle)) / 100;
+                angleDeg = angle * 180 / Math.PI;
+                angleDisplay.textContent = angleDeg.toFixed(1);
+            } else {
+                h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
+            }
             heightDisplay.textContent = h.toFixed(2);
 
             reportKinetic.textContent = kinetic.toFixed(2);
@@ -779,28 +1030,23 @@
             stepCounterSpan.textContent = stepCount;
 
             const maxScale = Math.max(mechanical, initialMechanicalEnergy, 5);
-            const kRatio = Math.min(kinetic / maxScale, 1);
-            const pRatio = Math.min(potential / maxScale, 1);
-            const mRatio = Math.min(mechanical / maxScale, 1);
-
-            kineticBar.style.width = (kRatio * 100) + '%';
-            potentialBar.style.width = (pRatio * 100) + '%';
-            mechanicalBar.style.width = (mRatio * 100) + '%';
+            kineticBar.style.width = (Math.min(kinetic / maxScale, 1) * 100) + '%';
+            potentialBar.style.width = (Math.min(potential / maxScale, 1) * 100) + '%';
+            mechanicalBar.style.width = (Math.min(mechanical / maxScale, 1) * 100) + '%';
         }
 
         function updateSlidersDisplay() {
             massVal.textContent = massSlider.value;
             velVal.textContent = velocitySlider.value;
-            if (!isIdealMode) {
-                dampVal.textContent = dampingSlider.value;
-                restitutionVal.textContent = restitutionSlider.value;
-            } else {
-                dampVal.textContent = '0.00';
-                restitutionVal.textContent = '1.00';
-            }
+            dampVal.textContent = isIdealMode ? '0.00' : dampingSlider.value;
+            restitutionVal.textContent = isIdealMode ? '1.00' : restitutionSlider.value;
+            angleVal.textContent = angleSlider.value;
+            lengthVal.textContent = lengthSlider.value;
         }
 
-        // ----- 理想模式切换 -----
+        // ============================================================
+        //  9. 理想模式切换
+        // ============================================================
         function setIdealMode(enable) {
             isIdealMode = enable;
             if (enable) {
@@ -826,7 +1072,6 @@
                 modeIndicator.textContent = '实际 (有损耗)';
                 modeIndicator.style.background = '#27ae60';
             }
-            // 重置停止状态
             isStopped = false;
             resetSimulation();
         }
@@ -835,226 +1080,9 @@
             setIdealMode(!isIdealMode);
         });
 
-        // ----- 物理更新 -----
-        function physicsUpdate() {
-            if (isPaused) return;
-
-            // 如果已经停止，不再更新物理
-            if (isStopped) return;
-
-            let dampCoeff = isIdealMode ? 0 : damping;
-            let restCoeff = isIdealMode ? 1.0 : restitution;
-
-            if (!isIdealMode) {
-                ball.vx *= (1 - dampCoeff * 0.4);
-                ball.vy *= (1 - dampCoeff * 0.4);
-            }
-            ball.vy += GRAVITY;
-
-            ball.x += ball.vx;
-            ball.y += ball.vy;
-
-            if (ball.y + ball.radius > GROUND_Y) {
-                ball.y = GROUND_Y - ball.radius;
-                if (Math.abs(ball.vy) > 0.05) {
-                    ball.vy = -ball.vy * restCoeff;
-                    if (!isIdealMode) {
-                        ball.vx *= (1 - dampCoeff * 0.2);
-                    }
-                } else {
-                    ball.vy = 0;
-                }
-            }
-
-            if (ball.x - ball.radius < LEFT_WALL) {
-                ball.x = LEFT_WALL + ball.radius;
-                ball.vx = -ball.vx * restCoeff;
-            } else if (ball.x + ball.radius > RIGHT_WALL) {
-                ball.x = RIGHT_WALL - ball.radius;
-                ball.vx = -ball.vx * restCoeff;
-            }
-
-            if (ball.y - ball.radius < 20) {
-                ball.y = 20 + ball.radius;
-                ball.vy = -ball.vy * restCoeff;
-            }
-
-            const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
-            if (!isIdealMode && speedSq < REST_THRESHOLD) {
-                ball.vx = 0;
-                ball.vy = 0;
-                if (ball.y + ball.radius > GROUND_Y - 1) {
-                    ball.y = GROUND_Y - ball.radius;
-                }
-            }
-
-            if (showTrajectory && stepCount % 2 === 0) {
-                trajectoryPoints.push({ x: ball.x, y: ball.y });
-                if (trajectoryPoints.length > 3000) {
-                    trajectoryPoints.splice(0, 100);
-                }
-            }
-
-            stepCount++;
-            updateReportAndBars();
-        }
-
-        // ----- 绘图 -----
-        function drawScene() {
-            ctx.clearRect(0, 0, 900, 560);
-
-            const grad = ctx.createLinearGradient(0, 0, 0, 560);
-            grad.addColorStop(0, '#d4e4fc');
-            grad.addColorStop(0.7, '#c0d4ec');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, 900, 560);
-
-            if (showTrajectory && trajectoryPoints.length > 1) {
-                ctx.beginPath();
-                ctx.moveTo(trajectoryPoints[0].x, trajectoryPoints[0].y);
-                for (let i = 1; i < trajectoryPoints.length; i++) {
-                    ctx.lineTo(trajectoryPoints[i].x, trajectoryPoints[i].y);
-                }
-                ctx.strokeStyle = 'rgba(220, 80, 40, 0.7)';
-                ctx.lineWidth = 2.5;
-                ctx.shadowColor = 'rgba(200, 60, 20, 0.2)';
-                ctx.shadowBlur = 6;
-                ctx.stroke();
-                ctx.shadowBlur = 0;
-                if (trajectoryPoints.length > 10) {
-                    for (let i = 0; i < trajectoryPoints.length; i += 12) {
-                        ctx.beginPath();
-                        ctx.arc(trajectoryPoints[i].x, trajectoryPoints[i].y, 2, 0, Math.PI * 2);
-                        ctx.fillStyle = 'rgba(200, 70, 30, 0.4)';
-                        ctx.fill();
-                    }
-                }
-            }
-
-            ctx.fillStyle = '#6f92b0';
-            ctx.shadowColor = 'rgba(0,0,0,0.1)';
-            ctx.shadowBlur = 6;
-            ctx.fillRect(0, GROUND_Y, 900, 560 - GROUND_Y);
-            ctx.shadowBlur = 0;
-            ctx.strokeStyle = '#4c6f8a';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(0, GROUND_Y);
-            ctx.lineTo(900, GROUND_Y);
-            ctx.stroke();
-
-            ctx.fillStyle = '#a8bfd8';
-            ctx.shadowBlur = 4;
-            ctx.fillRect(LEFT_WALL-6, 10, 6, GROUND_Y-10);
-            ctx.fillRect(RIGHT_WALL, 10, 6, GROUND_Y-10);
-            ctx.shadowBlur = 0;
-
-            ctx.strokeStyle = '#3a6a8a';
-            ctx.setLineDash([4, 6]);
-            ctx.lineWidth = 1.2;
-            ctx.beginPath();
-            ctx.moveTo(LEFT_WALL-2, GROUND_Y);
-            ctx.lineTo(RIGHT_WALL+2, GROUND_Y);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.fillStyle = '#2f5370';
-            ctx.font = '11px "Segoe UI"';
-            ctx.fillText('零势能面 (地面)', RIGHT_WALL-100, GROUND_Y-6);
-
-            const r = ball.radius;
-            ctx.shadowColor = 'rgba(0,0,0,0.25)';
-            ctx.shadowBlur = 14;
-            const gradient = ctx.createRadialGradient(
-                ball.x - 6, ball.y - 6, r*0.1,
-                ball.x, ball.y, r
-            );
-            gradient.addColorStop(0, '#ffb57c');
-            gradient.addColorStop(0.5, '#e07c3e');
-            gradient.addColorStop(1, '#aa4f1a');
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(ball.x, ball.y, r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.shadowBlur = 6;
-            ctx.fillStyle = 'rgba(255,255,230,0.35)';
-            ctx.beginPath();
-            ctx.arc(ball.x-5, ball.y-7, r*0.25, 0, Math.PI*2);
-            ctx.fill();
-
-            ctx.shadowBlur = 0;
-            const speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-            if (speed > 0.02) {
-                ctx.strokeStyle = '#1f3a5e';
-                ctx.lineWidth = 2.5;
-                ctx.beginPath();
-                ctx.moveTo(ball.x, ball.y);
-                ctx.lineTo(ball.x + ball.vx * 5, ball.y + ball.vy * 5);
-                ctx.stroke();
-                ctx.fillStyle = '#1f3a5e';
-                ctx.font = '12px "Segoe UI"';
-                ctx.fillText('v', ball.x + ball.vx * 5 + 6, ball.y + ball.vy * 5 - 4);
-            }
-
-            ctx.fillStyle = '#1f3a5e';
-            ctx.font = '13px "Segoe UI"';
-            const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
-            ctx.fillText(`h = ${h.toFixed(2)} m`, 20, 30);
-            ctx.fillText(`m = ${ball.mass.toFixed(2)} kg`, 20, 50);
-
-            const barX = 20, barY = 70, barW = 14, maxH = 140;
-            const maxE = Math.max(displayMechanical, initialMechanicalEnergy, 5);
-            const drawBar = (x, y, ratio, color) => {
-                const h = Math.min(ratio, 1) * maxH;
-                ctx.fillStyle = '#d0dbe8';
-                ctx.fillRect(x, y, barW, maxH);
-                ctx.fillStyle = color;
-                ctx.fillRect(x, y + maxH - h, barW, h);
-                ctx.strokeStyle = '#8a9fb0';
-                ctx.lineWidth = 0.8;
-                ctx.strokeRect(x, y, barW, maxH);
-            };
-            drawBar(barX, barY, displayKinetic / maxE, '#e67e22');
-            drawBar(barX+20, barY, displayPotential / maxE, '#2e86de');
-            drawBar(barX+40, barY, displayMechanical / maxE, '#27ae60');
-            ctx.fillStyle = '#1f3a5e';
-            ctx.font = '9px "Segoe UI"';
-            ctx.fillText('Ek', barX+2, barY-6);
-            ctx.fillText('Ep', barX+22, barY-6);
-            ctx.fillText('E', barX+42, barY-6);
-
-            if (isIdealMode) {
-                ctx.fillStyle = 'rgba(30, 120, 60, 0.12)';
-                ctx.fillRect(0, 0, 900, 560);
-                ctx.fillStyle = '#1a6a3a';
-                ctx.font = 'bold 22px "Segoe UI"';
-                ctx.fillText('✨ 理想情况 · 无能量损失', 280, 80);
-            }
-
-            if (isPaused) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-                ctx.fillRect(0, 0, 900, 560);
-                ctx.fillStyle = '#1a3a5a';
-                ctx.font = 'bold 28px "Segoe UI"';
-                ctx.fillText('⏸ 已暂停', 380, 280);
-            }
-
-            if (showTrajectory) {
-                ctx.fillStyle = 'rgba(200, 60, 30, 0.6)';
-                ctx.font = '12px "Segoe UI"';
-                ctx.fillText('📈 轨迹显示中', 780, 30);
-            }
-
-            ctx.shadowBlur = 0;
-        }
-
-        // ----- 动画循环 -----
-        function animate() {
-            physicsUpdate();
-            drawScene();
-            requestAnimationFrame(animate);
-        }
-
-        // ----- 滑块事件 -----
+        // ============================================================
+        //  10. 滑块事件
+        // ============================================================
         function onSliderChange() {
             mass = parseFloat(massSlider.value);
             initialVelocity = parseFloat(velocitySlider.value);
@@ -1064,18 +1092,65 @@
             }
             ball.mass = mass;
             ball.radius = 16 + mass * 3.5;
+
+            if (currentModel === 'pendulum') {
+                pendulumState.length = parseFloat(lengthSlider.value) * 100;
+                pendulumState.angle = parseFloat(angleSlider.value) * Math.PI / 180;
+                pendulumState.omega = 0;
+                ball.x = PENDULUM_PIVOT_X + pendulumState.length * Math.sin(pendulumState.angle);
+                ball.y = PENDULUM_PIVOT_Y + pendulumState.length * Math.cos(pendulumState.angle);
+                ball.vx = 0;
+                ball.vy = 0;
+            }
             isStopped = false;
             updateInitialEnergy();
             updateSlidersDisplay();
             updateReportAndBars();
         }
+
         massSlider.addEventListener('input', onSliderChange);
         velocitySlider.addEventListener('input', onSliderChange);
         dampingSlider.addEventListener('input', onSliderChange);
         restitutionSlider.addEventListener('input', onSliderChange);
+        angleSlider.addEventListener('input', onSliderChange);
+        lengthSlider.addEventListener('input', onSliderChange);
+
+        // ============================================================
+        //  11. 交互（暂停/轨迹/重置）
+        // ============================================================
+        trajectoryToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            showTrajectory = !showTrajectory;
+            if (showTrajectory) {
+                trajectoryToggle.classList.add('active');
+                trajectoryPoints = [];
+            } else {
+                trajectoryToggle.classList.remove('active');
+                trajectoryPoints = [];
+            }
+        });
+
+        function togglePause() {
+            isPaused = !isPaused;
+            if (isPaused) {
+                pauseBtn.innerHTML = '<i class="fas fa-play"></i> 继续';
+                pauseBtn.classList.add('paused');
+                statusBadge.innerHTML = '<i class="fas fa-pause"></i> 已暂停';
+                statusBadge.className = 'status-badge paused';
+            } else {
+                pauseBtn.innerHTML = '<i class="fas fa-pause"></i> 暂停';
+                pauseBtn.classList.remove('paused');
+                statusBadge.innerHTML = '<i class="fas fa-play"></i> 运行中';
+                statusBadge.className = 'status-badge running';
+            }
+        }
+        pauseBtn.addEventListener('click', togglePause);
+
         resetBtn.addEventListener('click', resetSimulation);
 
-        // ----- 拖拽交互 -----
+        // ============================================================
+        //  12. 拖拽交互
+        // ============================================================
         function getMousePos(e) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
@@ -1099,11 +1174,13 @@
             const pos = getMousePos(e);
             const dx = pos.x - ball.x;
             const dy = pos.y - ball.y;
-            if (dx*dx + dy*dy < (ball.radius + 22) ** 2) {
+            const hitRadius = ball.radius + 30;
+            if (dx*dx + dy*dy < hitRadius * hitRadius) {
                 isDragging = true;
                 dragOffsetX = dx;
                 dragOffsetY = dy;
                 canvas.style.cursor = 'grabbing';
+                isStopped = false;
                 e.preventDefault();
             }
         }
@@ -1113,19 +1190,38 @@
             const pos = getMousePos(e);
             let newX = pos.x - dragOffsetX;
             let newY = pos.y - dragOffsetY;
-            newX = Math.min(RIGHT_WALL - ball.radius, Math.max(LEFT_WALL + ball.radius, newX));
-            newY = Math.min(GROUND_Y - ball.radius, Math.max(20 + ball.radius, newY));
-            ball.x = newX;
-            ball.y = newY;
-            ball.vx = 0;
-            ball.vy = 0;
-            isStopped = false;
+
+            if (currentModel === 'pendulum') {
+                const dx = newX - PENDULUM_PIVOT_X;
+                const dy = newY - PENDULUM_PIVOT_Y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const len = pendulumState.length;
+                if (dist > 0.1) {
+                    const ratio = len / dist;
+                    newX = PENDULUM_PIVOT_X + dx * ratio;
+                    newY = PENDULUM_PIVOT_Y + dy * ratio;
+                }
+                const angle = Math.atan2(newX - PENDULUM_PIVOT_X, newY - PENDULUM_PIVOT_Y);
+                pendulumState.angle = angle;
+                pendulumState.omega = 0;
+                ball.x = newX;
+                ball.y = newY;
+                ball.vx = 0;
+                ball.vy = 0;
+            } else {
+                newX = Math.min(RIGHT_WALL - ball.radius, Math.max(LEFT_WALL + ball.radius, newX));
+                newY = Math.min(GROUND_Y - ball.radius, Math.max(20 + ball.radius, newY));
+                ball.x = newX;
+                ball.y = newY;
+                ball.vx = 0;
+                ball.vy = 0;
+            }
+
             const energy = calcMechanicalEnergy(ball);
             displayKinetic = energy.kinetic;
             displayPotential = energy.potential;
             displayMechanical = energy.total;
             displayLoss = Math.max(0, initialMechanicalEnergy - displayMechanical);
-            stepCounterSpan.textContent = stepCount;
             updateReportAndBars();
             drawScene();
             e.preventDefault();
@@ -1135,8 +1231,12 @@
             if (isDragging) {
                 isDragging = false;
                 canvas.style.cursor = 'grab';
-                ball.vx = (Math.random() - 0.5) * 1.5;
-                ball.vy = -1.2;
+                if (currentModel === 'pendulum') {
+                    pendulumState.omega = (Math.random() - 0.5) * 0.02;
+                } else {
+                    ball.vx = (Math.random() - 0.5) * 1.5;
+                    ball.vy = -1.2;
+                }
                 stepCount = 0;
                 trajectoryPoints = [];
                 isStopped = false;
@@ -1153,20 +1253,255 @@
         window.addEventListener('touchmove', onPointerMove, {passive: false});
         window.addEventListener('touchend', onPointerUp, {passive: false});
 
-        // ----- 导出 (付费模拟) -----
+        // ============================================================
+        //  13. 绘图
+        // ============================================================
+        function drawScene() {
+            ctx.clearRect(0, 0, 900, 560);
+
+            // 背景
+            const grad = ctx.createLinearGradient(0, 0, 0, 560);
+            grad.addColorStop(0, '#d4e4fc');
+            grad.addColorStop(0.7, '#c0d4ec');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 900, 560);
+
+            // 轨迹
+            if (showTrajectory && trajectoryPoints.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(trajectoryPoints[0].x, trajectoryPoints[0].y);
+                for (let i = 1; i < trajectoryPoints.length; i++) {
+                    ctx.lineTo(trajectoryPoints[i].x, trajectoryPoints[i].y);
+                }
+                ctx.strokeStyle = 'rgba(220, 80, 40, 0.7)';
+                ctx.lineWidth = 2.5;
+                ctx.shadowColor = 'rgba(200, 60, 20, 0.2)';
+                ctx.shadowBlur = 6;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                if (trajectoryPoints.length > 10) {
+                    for (let i = 0; i < trajectoryPoints.length; i += 12) {
+                        ctx.beginPath();
+                        ctx.arc(trajectoryPoints[i].x, trajectoryPoints[i].y, 2, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(200, 70, 30, 0.4)';
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // --- 单摆绘图 ---
+            if (currentModel === 'pendulum') {
+                // 悬挂点
+                ctx.beginPath();
+                ctx.arc(PENDULUM_PIVOT_X, PENDULUM_PIVOT_Y, 8, 0, Math.PI * 2);
+                ctx.fillStyle = '#1a3a5a';
+                ctx.shadowColor = 'rgba(0,0,0,0.15)';
+                ctx.shadowBlur = 6;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // 摆绳
+                ctx.beginPath();
+                ctx.moveTo(PENDULUM_PIVOT_X, PENDULUM_PIVOT_Y);
+                ctx.lineTo(ball.x, ball.y);
+                ctx.strokeStyle = '#4a6a8a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // 参考圆弧
+                ctx.beginPath();
+                const len = pendulumState.length;
+                ctx.arc(PENDULUM_PIVOT_X, PENDULUM_PIVOT_Y, len,
+                    -pendulumState.angle - 0.3, -pendulumState.angle + 0.3);
+                ctx.strokeStyle = 'rgba(60, 100, 140, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 地面（淡化）
+                ctx.fillStyle = 'rgba(100, 140, 170, 0.15)';
+                ctx.fillRect(0, GROUND_Y, 900, 560 - GROUND_Y);
+                ctx.strokeStyle = 'rgba(70, 110, 140, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 6]);
+                ctx.beginPath();
+                ctx.moveTo(0, GROUND_Y);
+                ctx.lineTo(900, GROUND_Y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 最低点标记
+                const lowX = PENDULUM_PIVOT_X;
+                const lowY = PENDULUM_PIVOT_Y + len;
+                ctx.beginPath();
+                ctx.arc(lowX, lowY, 4, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(40, 80, 120, 0.3)';
+                ctx.fill();
+                ctx.fillStyle = 'rgba(40, 80, 120, 0.5)';
+                ctx.font = '10px "Segoe UI"';
+                ctx.fillText('最低点', lowX + 10, lowY + 4);
+
+            } else {
+                // --- 自由落体绘图 ---
+                // 地面
+                ctx.fillStyle = '#6f92b0';
+                ctx.shadowColor = 'rgba(0,0,0,0.1)';
+                ctx.shadowBlur = 6;
+                ctx.fillRect(0, GROUND_Y, 900, 560 - GROUND_Y);
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#4c6f8a';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, GROUND_Y);
+                ctx.lineTo(900, GROUND_Y);
+                ctx.stroke();
+
+                // 墙壁
+                ctx.fillStyle = '#a8bfd8';
+                ctx.shadowBlur = 4;
+                ctx.fillRect(LEFT_WALL-6, 10, 6, GROUND_Y-10);
+                ctx.fillRect(RIGHT_WALL, 10, 6, GROUND_Y-10);
+                ctx.shadowBlur = 0;
+
+                // 零势能线
+                ctx.strokeStyle = '#3a6a8a';
+                ctx.setLineDash([4, 6]);
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(LEFT_WALL-2, GROUND_Y);
+                ctx.lineTo(RIGHT_WALL+2, GROUND_Y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#2f5370';
+                ctx.font = '11px "Segoe UI"';
+                ctx.fillText('零势能面 (地面)', RIGHT_WALL-100, GROUND_Y-6);
+            }
+
+            // 小球
+            const r = ball.radius;
+            ctx.shadowColor = 'rgba(0,0,0,0.25)';
+            ctx.shadowBlur = 14;
+            const gradient = ctx.createRadialGradient(
+                ball.x - 6, ball.y - 6, r*0.1,
+                ball.x, ball.y, r
+            );
+            gradient.addColorStop(0, '#ffb57c');
+            gradient.addColorStop(0.5, '#e07c3e');
+            gradient.addColorStop(1, '#aa4f1a');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 6;
+            ctx.fillStyle = 'rgba(255,255,230,0.35)';
+            ctx.beginPath();
+            ctx.arc(ball.x-5, ball.y-7, r*0.25, 0, Math.PI*2);
+            ctx.fill();
+
+            // 速度箭头
+            ctx.shadowBlur = 0;
+            const speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
+            if (speed > 0.02) {
+                ctx.strokeStyle = '#1f3a5e';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(ball.x, ball.y);
+                ctx.lineTo(ball.x + ball.vx * 5, ball.y + ball.vy * 5);
+                ctx.stroke();
+                ctx.fillStyle = '#1f3a5e';
+                ctx.font = '12px "Segoe UI"';
+                ctx.fillText('v', ball.x + ball.vx * 5 + 6, ball.y + ball.vy * 5 - 4);
+            }
+
+            // 信息
+            ctx.fillStyle = '#1f3a5e';
+            ctx.font = '13px "Segoe UI"';
+            if (currentModel === 'pendulum') {
+                const a = pendulumState.angle;
+                ctx.fillText(`θ = ${(a * 180 / Math.PI).toFixed(1)}°`, 20, 30);
+                ctx.fillText(`L = ${(pendulumState.length/100).toFixed(2)} m`, 20, 50);
+            } else {
+                const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
+                ctx.fillText(`h = ${h.toFixed(2)} m`, 20, 30);
+                ctx.fillText(`m = ${ball.mass.toFixed(2)} kg`, 20, 50);
+            }
+
+            // 能量条
+            const barX = 20, barY = 70, barW = 14, maxH = 140;
+            const maxE = Math.max(displayMechanical, initialMechanicalEnergy, 5);
+            const drawBar = (x, y, ratio, color) => {
+                const h = Math.min(ratio, 1) * maxH;
+                ctx.fillStyle = '#d0dbe8';
+                ctx.fillRect(x, y, barW, maxH);
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y + maxH - h, barW, h);
+                ctx.strokeStyle = '#8a9fb0';
+                ctx.lineWidth = 0.8;
+                ctx.strokeRect(x, y, barW, maxH);
+            };
+            drawBar(barX, barY, displayKinetic / maxE, '#e67e22');
+            drawBar(barX+20, barY, displayPotential / maxE, '#2e86de');
+            drawBar(barX+40, barY, displayMechanical / maxE, '#27ae60');
+            ctx.fillStyle = '#1f3a5e';
+            ctx.font = '9px "Segoe UI"';
+            ctx.fillText('Ek', barX+2, barY-6);
+            ctx.fillText('Ep', barX+22, barY-6);
+            ctx.fillText('E', barX+42, barY-6);
+
+            // 理想模式标识
+            if (isIdealMode) {
+                ctx.fillStyle = 'rgba(30, 120, 60, 0.12)';
+                ctx.fillRect(0, 0, 900, 560);
+                ctx.fillStyle = '#1a6a3a';
+                ctx.font = 'bold 22px "Segoe UI"';
+                ctx.fillText('✨ 理想情况 · 无能量损失', 280, 80);
+            }
+
+            // 暂停标识
+            if (isPaused) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+                ctx.fillRect(0, 0, 900, 560);
+                ctx.fillStyle = '#1a3a5a';
+                ctx.font = 'bold 28px "Segoe UI"';
+                ctx.fillText('⏸ 已暂停', 380, 280);
+            }
+
+            if (showTrajectory) {
+                ctx.fillStyle = 'rgba(200, 60, 30, 0.6)';
+                ctx.font = '12px "Segoe UI"';
+                ctx.fillText('📈 轨迹显示中', 780, 30);
+            }
+
+            ctx.shadowBlur = 0;
+        }
+
+        // ============================================================
+        //  14. 导出（付费模拟）
+        // ============================================================
         function handleExport(type) {
-            const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100).toFixed(2);
+            let h, angle = 0;
+            if (currentModel === 'pendulum') {
+                const len = pendulumState.length;
+                const a = pendulumState.angle;
+                h = len * (1 - Math.cos(a)) / 100;
+                angle = a * 180 / Math.PI;
+            } else {
+                h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
+            }
             const v = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy).toFixed(2);
             const modeStr = isIdealMode ? '✨ 理想情况 (无能量损失)' : '实际情况 (有阻尼)';
+            const modelStr = currentModel === 'pendulum' ? '单摆' : '自由落体/碰撞';
             const reportText = `📐 高中物理实验报告
             ==========================
+            模型: ${modelStr}
             模式: ${modeStr}
             质量 m = ${mass.toFixed(2)} kg
-            初速度 v₀ = ${initialVelocity.toFixed(2)} m/s
+            ${currentModel === 'pendulum' ? `摆长 L = ${(pendulumState.length/100).toFixed(2)} m` : `初速度 v₀ = ${initialVelocity.toFixed(2)} m/s`}
             阻尼 b = ${(isIdealMode ? 0 : damping).toFixed(3)}
             恢复系数 e = ${(isIdealMode ? 1.0 : restitution).toFixed(2)}
             ---------------------------------
-            当前高度 h = ${h} m
+            ${currentModel === 'pendulum' ? `摆角 θ = ${angle.toFixed(1)}°` : `高度 h = ${h.toFixed(2)} m`}
             速度 v = ${v} m/s
             动能 Ek = ${displayKinetic.toFixed(2)} J
             势能 Ep = ${displayPotential.toFixed(2)} J
@@ -1187,9 +1522,20 @@
         exportReportBtn.addEventListener('click', () => handleExport('report'));
         exportQuestionBtn.addEventListener('click', () => handleExport('question'));
 
-        // ----- 初始化 -----
-        setIdealMode(false);
+        // ============================================================
+        //  15. 启动
+        // ============================================================
+        switchModel('bounce');
         animate();
+
+        function animate() {
+            physicsUpdate();
+            drawScene();
+            requestAnimationFrame(animate);
+        }
+
+        // 暴露 resetSimulation 给重置按钮
+        // 但 resetBtn 已经绑定了 resetSimulation
     })();
 </script>
 </body>
