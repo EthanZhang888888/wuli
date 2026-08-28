@@ -719,11 +719,14 @@
         let currentKinetic = 0;
         let currentPotential = 0;
 
-        // 判断小球是否静止（在地面上且速度极小）
+        // 静止阈值（速度平方）
+        const REST_THRESHOLD = 0.01;
+
+        // ----- 判断小球是否静止 -----
         function isBallAtRest() {
             const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
             const onGround = (ball.y + ball.radius >= GROUND_Y - 0.5);
-            return onGround && speedSq < 0.002;
+            return onGround && speedSq < REST_THRESHOLD;
         }
 
         // ----- 轨迹开关 -----
@@ -803,15 +806,24 @@
 
         // ----- 更新报告 -----
         function updateReportAndBars() {
-            let energy = calcMechanicalEnergy(ball);
+            // 首先检查是否静止，如果是则强制归零（消除浮点残余）
+            const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
+            const onGround = (ball.y + ball.radius >= GROUND_Y - 0.5);
 
-            // 如果小球静止，强制所有能量归零（消除浮点误差）
-            if (isBallAtRest() && !isIdealMode) {
+            if (!isIdealMode && onGround && speedSq < REST_THRESHOLD) {
                 ball.vx = 0;
                 ball.vy = 0;
                 ball.y = GROUND_Y - ball.radius;
-                energy = { kinetic: 0, potential: 0, total: 0 };
+                currentKinetic = 0;
+                currentPotential = 0;
+                currentMechanicalEnergy = 0;
+                energyLoss = initialMechanicalEnergy;
+                // 更新显示后直接返回
+                updateDisplay(0, 0, 0);
+                return;
             }
+
+            let energy = calcMechanicalEnergy(ball);
 
             currentKinetic = energy.kinetic;
             currentPotential = energy.potential;
@@ -835,25 +847,40 @@
                 energyLoss = Math.max(0, initialMechanicalEnergy - currentMechanicalEnergy);
             }
 
-            // 显示高度（底部到地面距离）
+            updateDisplay(currentKinetic, currentPotential, currentMechanicalEnergy);
+        }
+
+        function updateDisplay(kinetic, potential, mechanical) {
+            // 再次检查静止状态，确保动能显示为0
+            const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
+            const onGround = (ball.y + ball.radius >= GROUND_Y - 0.5);
+            let displayKinetic = kinetic;
+            let displayMechanical = mechanical;
+            let displayLoss = energyLoss;
+
+            if (!isIdealMode && onGround && speedSq < REST_THRESHOLD) {
+                displayKinetic = 0;
+                displayMechanical = 0;
+                displayLoss = initialMechanicalEnergy;
+                // 确保物理状态也归零
+                ball.vx = 0;
+                ball.vy = 0;
+                ball.y = GROUND_Y - ball.radius;
+            }
+
             const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
             heightDisplay.textContent = h.toFixed(2);
 
-            // 动能显示：如果静止则强制为0.00
-            const displayKinetic = isBallAtRest() && !isIdealMode ? 0 : currentKinetic;
-            const displayMechanical = isBallAtRest() && !isIdealMode ? 0 : currentMechanicalEnergy;
-            const displayLoss = isBallAtRest() && !isIdealMode ? initialMechanicalEnergy : energyLoss;
-
             reportKinetic.textContent = displayKinetic.toFixed(2);
-            reportPotential.textContent = currentPotential.toFixed(2);
+            reportPotential.textContent = potential.toFixed(2);
             reportMechanical.textContent = displayMechanical.toFixed(2);
             energyLossSpan.textContent = displayLoss.toFixed(3);
             stepCounterSpan.textContent = stepCount;
 
-            const maxScale = Math.max(currentMechanicalEnergy, initialMechanicalEnergy, 5);
-            const kRatio = Math.min(currentKinetic / maxScale, 1);
-            const pRatio = Math.min(currentPotential / maxScale, 1);
-            const mRatio = Math.min(currentMechanicalEnergy / maxScale, 1);
+            const maxScale = Math.max(mechanical, initialMechanicalEnergy, 5);
+            const kRatio = Math.min(kinetic / maxScale, 1);
+            const pRatio = Math.min(potential / maxScale, 1);
+            const mRatio = Math.min(mechanical / maxScale, 1);
 
             kineticBar.style.width = (kRatio * 100) + '%';
             potentialBar.style.width = (pRatio * 100) + '%';
@@ -950,9 +977,9 @@
                 ball.vy = -ball.vy * restCoeff;
             }
 
-            // 速度极小时强制静止（消除浮点残余）
+            // 速度极小时强制静止
             const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
-            if (!isIdealMode && speedSq < 0.002) {
+            if (!isIdealMode && speedSq < REST_THRESHOLD) {
                 ball.vx = 0;
                 ball.vy = 0;
                 if (ball.y + ball.radius > GROUND_Y - 1) {
