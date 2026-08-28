@@ -602,7 +602,7 @@
             return onGround && speedSq < REST_THRESHOLD;
         }
 
-        // ----- 强制小球静止 -----
+        // ----- 强制小球静止（彻底归零） -----
         function forceBallRest() {
             ball.vx = 0;
             ball.vy = 0;
@@ -610,6 +610,7 @@
             currentKinetic = 0;
             currentPotential = 0;
             currentMechanicalEnergy = 0;
+            // 能量损失 = 初始机械能（此时初始机械能应该是精确的）
             energyLoss = initialMechanicalEnergy;
         }
 
@@ -689,10 +690,9 @@
 
         // ----- 更新报告 (核心修正) -----
         function updateReportAndBars() {
-            // ===== 第一步：检测静止状态，如果静止则强制归零并直接返回 =====
+            // ===== 第一步：检测静止状态 =====
             if (!isIdealMode && isBallAtRest()) {
                 forceBallRest();
-                // 直接更新显示并返回，不再调用 calcMechanicalEnergy
                 updateDisplay(0, 0, 0, initialMechanicalEnergy);
                 return;
             }
