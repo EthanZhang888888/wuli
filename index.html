@@ -732,10 +732,10 @@
             updateDisplay(currentKinetic, currentPotential, currentMechanicalEnergy, energyLoss);
         }
 
-        // ----- 统一显示更新 (带强制截断) -----
+        // ----- 统一显示更新 (强制截断：能量 < 0.04 显示为 0) -----
         function updateDisplay(kinetic, potential, mechanical, loss) {
-            // ★ 核心：如果机械能小于 0.001，强制显示为 0.00
-            const shouldZero = mechanical < 0.001;
+            // ★ 核心：如果机械能小于 0.04，强制显示为 0.00
+            const shouldZero = mechanical < 0.04;
 
             const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
             heightDisplay.textContent = h.toFixed(2);
