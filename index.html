@@ -750,10 +750,11 @@
 
         pauseBtn.addEventListener('click', togglePause);
 
-        // ----- 计算机械能 -----
+        // ----- 计算机械能 (修正：零势能面在地面) -----
         function calcMechanicalEnergy(ballState) {
             const v = Math.sqrt(ballState.vx * ballState.vx + ballState.vy * ballState.vy);
-            const h = Math.max(0, (GROUND_Y - ballState.y) / 100);
+            // 关键修正：高度为球心到地面的距离减去半径，即球底部到地面的距离
+            const h = Math.max(0, (GROUND_Y - ballState.y - ballState.radius) / 100);
             const kinetic = 0.5 * ballState.mass * v * v;
             const potential = ballState.mass * GRAVITY * h * 100;
             return { kinetic, potential, total: kinetic + potential };
@@ -819,7 +820,8 @@
                 energyLoss = Math.max(0, initialMechanicalEnergy - currentMechanicalEnergy);
             }
 
-            const h = Math.max(0, (GROUND_Y - ball.y) / 100);
+            // 修正高度显示
+            const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
             heightDisplay.textContent = h.toFixed(2);
 
             reportKinetic.textContent = currentKinetic.toFixed(2);
@@ -884,14 +886,13 @@
             setIdealMode(!isIdealMode);
         });
 
-        // ----- 物理更新 (修正耗散) -----
+        // ----- 物理更新 -----
         function physicsUpdate() {
             if (isPaused) return;
 
             let dampCoeff = isIdealMode ? 0 : damping;
             let restCoeff = isIdealMode ? 1.0 : restitution;
 
-            // 速度阻尼
             if (!isIdealMode) {
                 ball.vx *= (1 - dampCoeff * 0.4);
                 ball.vy *= (1 - dampCoeff * 0.4);
@@ -904,7 +905,6 @@
             // 地面碰撞
             if (ball.y + ball.radius > GROUND_Y) {
                 ball.y = GROUND_Y - ball.radius;
-                // 使用更小的速度阈值，让能量充分耗散
                 if (Math.abs(ball.vy) > 0.05) {
                     ball.vy = -ball.vy * restCoeff;
                     if (!isIdealMode) {
@@ -930,12 +930,11 @@
                 ball.vy = -ball.vy * restCoeff;
             }
 
-            // 🔥 关键修正：当总速度极小时，强制静止（机械能完全耗散）
+            // 速度极小时强制静止（机械能完全耗散）
             const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
             if (!isIdealMode && speedSq < 0.0005) {
                 ball.vx = 0;
                 ball.vy = 0;
-                // 确保小球在地面上
                 if (ball.y + ball.radius > GROUND_Y - 1) {
                     ball.y = GROUND_Y - ball.radius;
                 }
@@ -1040,7 +1039,7 @@
             ctx.arc(ball.x-5, ball.y-7, r*0.25, 0, Math.PI*2);
             ctx.fill();
 
-            // 速度箭头 (仅当速度足够大时显示)
+            // 速度箭头
             ctx.shadowBlur = 0;
             const speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
             if (speed > 0.02) {
@@ -1057,7 +1056,8 @@
 
             ctx.fillStyle = '#1f3a5e';
             ctx.font = '13px "Segoe UI"';
-            ctx.fillText(`h = ${((GROUND_Y - ball.y)/100).toFixed(2)} m`, 20, 30);
+            const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
+            ctx.fillText(`h = ${h.toFixed(2)} m`, 20, 30);
             ctx.fillText(`m = ${ball.mass.toFixed(2)} kg`, 20, 50);
 
             // 能量条
@@ -1214,7 +1214,7 @@
 
         // ----- 导出 (付费模拟) -----
         function handleExport(type) {
-            const h = ((GROUND_Y - ball.y) / 100).toFixed(2);
+            const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100).toFixed(2);
             const v = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy).toFixed(2);
             const modeStr = isIdealMode ? '✨ 理想情况 (无能量损失)' : '实际情况 (有阻尼)';
             const reportText = `📐 高中物理实验报告
