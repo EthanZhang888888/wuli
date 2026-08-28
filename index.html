@@ -584,16 +584,20 @@
 
         let stepCount = 0;
         let initialMechanicalEnergy = 0;
-        let currentMechanicalEnergy = 0;
         let energyLoss = 0;
         let isDragging = false;
         let dragOffsetX = 0, dragOffsetY = 0;
 
-        let currentKinetic = 0;
-        let currentPotential = 0;
+        // 显示缓存 - 用于保证单调递减
+        let displayKinetic = 0;
+        let displayPotential = 0;
+        let displayMechanical = 0;
+        let displayLoss = 0;
+        let isStopped = false;
 
-        // ----- 静止阈值（速度平方） -----
+        // ----- 静止阈值 -----
         const REST_THRESHOLD = 0.02;
+        const ZERO_THRESHOLD = 0.04;
 
         // ----- 判断小球是否静止 -----
         function isBallAtRest() {
@@ -607,10 +611,11 @@
             ball.vx = 0;
             ball.vy = 0;
             ball.y = GROUND_Y - ball.radius;
-            currentKinetic = 0;
-            currentPotential = 0;
-            currentMechanicalEnergy = 0;
-            energyLoss = initialMechanicalEnergy;
+            isStopped = true;
+            displayKinetic = 0;
+            displayPotential = 0;
+            displayMechanical = 0;
+            displayLoss = initialMechanicalEnergy;
         }
 
         // ----- 轨迹开关 -----
@@ -643,7 +648,7 @@
         }
         pauseBtn.addEventListener('click', togglePause);
 
-        // ----- 计算机械能 (保留 *100 标度，保持运动合理) -----
+        // ----- 计算机械能 -----
         function calcMechanicalEnergy(ballState) {
             const v = Math.sqrt(ballState.vx * ballState.vx + ballState.vy * ballState.vy);
             const h = Math.max(0, (GROUND_Y - ballState.y - ballState.radius) / 100);
@@ -656,10 +661,11 @@
         function updateInitialEnergy() {
             const energy = calcMechanicalEnergy(ball);
             initialMechanicalEnergy = energy.total;
-            currentKinetic = energy.kinetic;
-            currentPotential = energy.potential;
-            currentMechanicalEnergy = energy.total;
-            energyLoss = 0;
+            displayKinetic = energy.kinetic;
+            displayPotential = energy.potential;
+            displayMechanical = energy.total;
+            displayLoss = 0;
+            isStopped = false;
         }
 
         // ----- 重置模拟 -----
@@ -687,9 +693,15 @@
             updateReportAndBars();
         }
 
-        // ----- 更新报告 (显示层强制截断) -----
+        // ----- 更新报告 (保证单调递减) -----
         function updateReportAndBars() {
-            // 检查静止状态
+            // 如果已经停止，保持归零状态
+            if (isStopped) {
+                updateDisplay(0, 0, 0, initialMechanicalEnergy);
+                return;
+            }
+
+            // 检查是否静止
             if (!isIdealMode && isBallAtRest()) {
                 forceBallRest();
                 updateDisplay(0, 0, 0, initialMechanicalEnergy);
@@ -698,30 +710,30 @@
 
             // 正常计算
             let energy = calcMechanicalEnergy(ball);
-            currentKinetic = energy.kinetic;
-            currentPotential = energy.potential;
-            currentMechanicalEnergy = energy.total;
+            let rawKinetic = energy.kinetic;
+            let rawPotential = energy.potential;
+            let rawMechanical = energy.total;
 
             // 理想模式：能量守恒修正
             if (isIdealMode) {
-                const diff = currentMechanicalEnergy - initialMechanicalEnergy;
+                const diff = rawMechanical - initialMechanicalEnergy;
                 if (Math.abs(diff) > 1e-8 && initialMechanicalEnergy > 0) {
-                    const scale = Math.sqrt((initialMechanicalEnergy - currentPotential) / Math.max(currentKinetic, 1e-10));
+                    const scale = Math.sqrt((initialMechanicalEnergy - rawPotential) / Math.max(rawKinetic, 1e-10));
                     if (isFinite(scale) && scale > 0 && scale < 10) {
                         ball.vx *= scale;
                         ball.vy *= scale;
                         const newEnergy = calcMechanicalEnergy(ball);
-                        currentKinetic = newEnergy.kinetic;
-                        currentPotential = newEnergy.potential;
-                        currentMechanicalEnergy = newEnergy.total;
+                        rawKinetic = newEnergy.kinetic;
+                        rawPotential = newEnergy.potential;
+                        rawMechanical = newEnergy.total;
                     }
                 }
                 energyLoss = 0;
             } else {
-                energyLoss = Math.max(0, initialMechanicalEnergy - currentMechanicalEnergy);
+                energyLoss = Math.max(0, initialMechanicalEnergy - rawMechanical);
             }
 
-            // 二次检查：防止浮点误差残留
+            // 二次检查：防止浮点误差
             const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
             if (!isIdealMode && speedSq < REST_THRESHOLD && ball.y + ball.radius >= GROUND_Y - 0.5) {
                 forceBallRest();
@@ -729,27 +741,41 @@
                 return;
             }
 
-            updateDisplay(currentKinetic, currentPotential, currentMechanicalEnergy, energyLoss);
+            // 更新显示值 - 保证单调递减
+            // 机械能只能减小（实际模式）或保持不变（理想模式）
+            if (!isIdealMode) {
+                // 实际模式：机械能单调递减
+                if (rawMechanical > displayMechanical && displayMechanical > 0.001) {
+                    // 如果计算值比显示值大（浮点误差导致），保持显示值不变
+                    rawMechanical = displayMechanical;
+                    rawKinetic = displayKinetic;
+                    rawPotential = displayPotential;
+                }
+                // 如果机械能小于阈值，直接归零
+                if (rawMechanical < ZERO_THRESHOLD) {
+                    forceBallRest();
+                    updateDisplay(0, 0, 0, initialMechanicalEnergy);
+                    return;
+                }
+            }
+
+            displayKinetic = rawKinetic;
+            displayPotential = rawPotential;
+            displayMechanical = rawMechanical;
+            displayLoss = energyLoss;
+
+            updateDisplay(displayKinetic, displayPotential, displayMechanical, displayLoss);
         }
 
-        // ----- 统一显示更新 (强制截断：能量 < 0.04 显示为 0) -----
+        // ----- 统一显示更新 -----
         function updateDisplay(kinetic, potential, mechanical, loss) {
-            // ★ 核心：如果机械能小于 0.04，强制显示为 0.00
-            const shouldZero = mechanical < 0.04;
-
             const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
             heightDisplay.textContent = h.toFixed(2);
 
-            // 显示能量 - 强制截断
-            const showKinetic = shouldZero ? 0 : kinetic;
-            const showPotential = shouldZero ? 0 : potential;
-            const showMechanical = shouldZero ? 0 : mechanical;
-            const showLoss = shouldZero ? initialMechanicalEnergy : loss;
-
-            reportKinetic.textContent = showKinetic.toFixed(2);
-            reportPotential.textContent = showPotential.toFixed(2);
-            reportMechanical.textContent = showMechanical.toFixed(2);
-            energyLossSpan.textContent = showLoss.toFixed(3);
+            reportKinetic.textContent = kinetic.toFixed(2);
+            reportPotential.textContent = potential.toFixed(2);
+            reportMechanical.textContent = mechanical.toFixed(2);
+            energyLossSpan.textContent = loss.toFixed(3);
             stepCounterSpan.textContent = stepCount;
 
             const maxScale = Math.max(mechanical, initialMechanicalEnergy, 5);
@@ -800,6 +826,8 @@
                 modeIndicator.textContent = '实际 (有损耗)';
                 modeIndicator.style.background = '#27ae60';
             }
+            // 重置停止状态
+            isStopped = false;
             resetSimulation();
         }
         idealToggle.addEventListener('click', function(e) {
@@ -807,9 +835,12 @@
             setIdealMode(!isIdealMode);
         });
 
-        // ----- 物理更新 (完全不变，保持优秀运动) -----
+        // ----- 物理更新 -----
         function physicsUpdate() {
             if (isPaused) return;
+
+            // 如果已经停止，不再更新物理
+            if (isStopped) return;
 
             let dampCoeff = isIdealMode ? 0 : damping;
             let restCoeff = isIdealMode ? 1.0 : restitution;
@@ -971,7 +1002,7 @@
             ctx.fillText(`m = ${ball.mass.toFixed(2)} kg`, 20, 50);
 
             const barX = 20, barY = 70, barW = 14, maxH = 140;
-            const maxE = Math.max(currentMechanicalEnergy, initialMechanicalEnergy, 5);
+            const maxE = Math.max(displayMechanical, initialMechanicalEnergy, 5);
             const drawBar = (x, y, ratio, color) => {
                 const h = Math.min(ratio, 1) * maxH;
                 ctx.fillStyle = '#d0dbe8';
@@ -982,9 +1013,9 @@
                 ctx.lineWidth = 0.8;
                 ctx.strokeRect(x, y, barW, maxH);
             };
-            drawBar(barX, barY, currentKinetic / maxE, '#e67e22');
-            drawBar(barX+20, barY, currentPotential / maxE, '#2e86de');
-            drawBar(barX+40, barY, currentMechanicalEnergy / maxE, '#27ae60');
+            drawBar(barX, barY, displayKinetic / maxE, '#e67e22');
+            drawBar(barX+20, barY, displayPotential / maxE, '#2e86de');
+            drawBar(barX+40, barY, displayMechanical / maxE, '#27ae60');
             ctx.fillStyle = '#1f3a5e';
             ctx.font = '9px "Segoe UI"';
             ctx.fillText('Ek', barX+2, barY-6);
@@ -1033,6 +1064,7 @@
             }
             ball.mass = mass;
             ball.radius = 16 + mass * 3.5;
+            isStopped = false;
             updateInitialEnergy();
             updateSlidersDisplay();
             updateReportAndBars();
@@ -1087,11 +1119,12 @@
             ball.y = newY;
             ball.vx = 0;
             ball.vy = 0;
+            isStopped = false;
             const energy = calcMechanicalEnergy(ball);
-            currentKinetic = energy.kinetic;
-            currentPotential = energy.potential;
-            currentMechanicalEnergy = energy.total;
-            energyLoss = Math.max(0, initialMechanicalEnergy - currentMechanicalEnergy);
+            displayKinetic = energy.kinetic;
+            displayPotential = energy.potential;
+            displayMechanical = energy.total;
+            displayLoss = Math.max(0, initialMechanicalEnergy - displayMechanical);
             stepCounterSpan.textContent = stepCount;
             updateReportAndBars();
             drawScene();
@@ -1106,6 +1139,7 @@
                 ball.vy = -1.2;
                 stepCount = 0;
                 trajectoryPoints = [];
+                isStopped = false;
                 updateInitialEnergy();
                 updateReportAndBars();
                 e.preventDefault();
@@ -1134,11 +1168,11 @@
             ---------------------------------
             当前高度 h = ${h} m
             速度 v = ${v} m/s
-            动能 Ek = ${currentKinetic.toFixed(2)} J
-            势能 Ep = ${currentPotential.toFixed(2)} J
-            机械能 E = ${currentMechanicalEnergy.toFixed(2)} J
+            动能 Ek = ${displayKinetic.toFixed(2)} J
+            势能 Ep = ${displayPotential.toFixed(2)} J
+            机械能 E = ${displayMechanical.toFixed(2)} J
             初始机械能 E₀ = ${initialMechanicalEnergy.toFixed(2)} J
-            能量损失 ΔE = ${energyLoss.toFixed(3)} J
+            能量损失 ΔE = ${displayLoss.toFixed(3)} J
             模拟步数: ${stepCount}
             ==========================
             【付费导出】完整版含图表与习题解析`;
