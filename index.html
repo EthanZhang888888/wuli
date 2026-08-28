@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>物理沙盒 · 高中物理实验台 (精确守恒)</title>
+    <title>物理沙盒 · 高中实验台 (含轨迹)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {
@@ -116,7 +116,8 @@
         .stage-title .left-group {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
         .stage-title .left-group span {
@@ -183,6 +184,38 @@
 
         .ideal-toggle.active .toggle-switch::after {
             left: 20px;
+        }
+
+        .ctrl-btn {
+            background: #e8f0fe;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 60px;
+            font-weight: 500;
+            color: #1f4a7a;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid #b8cee8;
+            font-size: 0.85rem;
+        }
+
+        .ctrl-btn:hover {
+            background: #d0e2f7;
+            border-color: #8eb3d9;
+        }
+
+        .ctrl-btn.active {
+            background: #d4e4fc;
+            border-color: #4f8fc9;
+        }
+
+        .ctrl-btn.paused {
+            background: #ffdbb5;
+            border-color: #e8a85c;
+            color: #8a5a1a;
         }
 
         .canvas-wrapper {
@@ -338,6 +371,24 @@
             margin-bottom: 16px;
             display: flex;
             justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-badge {
+            font-size: 0.7rem;
+            padding: 3px 14px;
+            border-radius: 40px;
+            font-weight: 600;
+        }
+
+        .status-badge.running {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-badge.paused {
+            background: #e67e22;
+            color: white;
         }
 
         .report-content {
@@ -459,6 +510,47 @@
             margin-left: 6px;
         }
 
+        .trajectory-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #e8f0fe;
+            padding: 6px 16px 6px 20px;
+            border-radius: 60px;
+            border: 1px solid #b8cee8;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #1f3a57;
+            cursor: pointer;
+            transition: 0.2s;
+            user-select: none;
+        }
+
+        .trajectory-toggle i {
+            font-size: 1rem;
+            color: #2b6a9e;
+        }
+
+        .trajectory-toggle.active {
+            background: #d4e4fc;
+            border-color: #4f8fc9;
+            box-shadow: 0 0 0 2px rgba(30, 100, 180, 0.2);
+        }
+
+        .trajectory-toggle .toggle-switch {
+            width: 34px;
+            height: 20px;
+        }
+
+        .trajectory-toggle .toggle-switch::after {
+            width: 16px;
+            height: 16px;
+        }
+
+        .trajectory-toggle.active .toggle-switch::after {
+            left: 16px;
+        }
+
         @media (max-width: 600px) {
             .sandbox-container {
                 padding: 14px;
@@ -483,7 +575,12 @@
                 <div class="left-group">
                     <span><i class="fas fa-arrow-pointer" style="margin-right: 6px;"></i> 拖拽小球 · 探究能量</span>
                     <div class="ideal-toggle" id="idealToggle">
-                        <i class="fas fa-star"></i> 理想情况
+                        <i class="fas fa-star"></i> 理想
+                        <div class="toggle-switch"></div>
+                    </div>
+                    <button class="ctrl-btn" id="pauseBtn"><i class="fas fa-pause"></i> 暂停</button>
+                    <div class="trajectory-toggle" id="trajectoryToggle">
+                        <i class="fas fa-wave-square"></i> 轨迹
                         <div class="toggle-switch"></div>
                     </div>
                 </div>
@@ -518,7 +615,7 @@
             <h3><i class="fas fa-file-pen"></i> 实验报告 <span id="modeIndicator" class="mode-badge" style="background:#27ae60;">实际</span></h3>
             <div class="report-meta">
                 <span><i class="far fa-clock"></i> 实时更新</span>
-                <span><i class="fas fa-circle" style="color: #2b9e6a; font-size: 0.6rem;"></i> 能量追踪</span>
+                <span class="status-badge running" id="statusBadge"><i class="fas fa-play"></i> 运行中</span>
             </div>
 
             <div class="report-content" id="reportContent">
@@ -584,6 +681,16 @@
         const exportQuestionBtn = document.getElementById('exportQuestionBtn');
         const idealToggle = document.getElementById('idealToggle');
         const modeIndicator = document.getElementById('modeIndicator');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const statusBadge = document.getElementById('statusBadge');
+        const trajectoryToggle = document.getElementById('trajectoryToggle');
+
+        // ----- 状态 -----
+        let isPaused = false;
+        let showTrajectory = false;
+
+        // ----- 轨迹数据 -----
+        let trajectoryPoints = [];
 
         // ----- 物理参数 -----
         let mass = 1.0;
@@ -614,7 +721,39 @@
         let currentKinetic = 0;
         let currentPotential = 0;
 
-        // ----- 计算机械能 (动能+重力势能) -----
+        // ----- 轨迹开关 -----
+        trajectoryToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            showTrajectory = !showTrajectory;
+            if (showTrajectory) {
+                trajectoryToggle.classList.add('active');
+                // 重置轨迹
+                trajectoryPoints = [];
+            } else {
+                trajectoryToggle.classList.remove('active');
+                trajectoryPoints = [];
+            }
+        });
+
+        // ----- 暂停控制 -----
+        function togglePause() {
+            isPaused = !isPaused;
+            if (isPaused) {
+                pauseBtn.innerHTML = '<i class="fas fa-play"></i> 继续';
+                pauseBtn.classList.add('paused');
+                statusBadge.innerHTML = '<i class="fas fa-pause"></i> 已暂停';
+                statusBadge.className = 'status-badge paused';
+            } else {
+                pauseBtn.innerHTML = '<i class="fas fa-pause"></i> 暂停';
+                pauseBtn.classList.remove('paused');
+                statusBadge.innerHTML = '<i class="fas fa-play"></i> 运行中';
+                statusBadge.className = 'status-badge running';
+            }
+        }
+
+        pauseBtn.addEventListener('click', togglePause);
+
+        // ----- 计算机械能 -----
         function calcMechanicalEnergy(ballState) {
             const v = Math.sqrt(ballState.vx * ballState.vx + ballState.vy * ballState.vy);
             const h = Math.max(0, (GROUND_Y - ballState.y) / 100);
@@ -623,7 +762,7 @@
             return { kinetic, potential, total: kinetic + potential };
         }
 
-        // ----- 更新初始能量 (基于当前小球状态) -----
+        // ----- 更新初始能量 -----
         function updateInitialEnergy() {
             const energy = calcMechanicalEnergy(ball);
             initialMechanicalEnergy = energy.total;
@@ -653,28 +792,25 @@
             ball.vy = -1.5;
 
             stepCount = 0;
+            trajectoryPoints = [];
             updateInitialEnergy();
             updateReportAndBars();
         }
 
-        // ----- 更新报告 + 能量条 -----
+        // ----- 更新报告 -----
         function updateReportAndBars() {
             const energy = calcMechanicalEnergy(ball);
             currentKinetic = energy.kinetic;
             currentPotential = energy.potential;
             currentMechanicalEnergy = energy.total;
 
-            // 理想模式下，强制机械能等于初始值（精确守恒）
             if (isIdealMode) {
-                // 如果机械能偏离初始值超过1e-8，通过调整速度来修正
                 const diff = currentMechanicalEnergy - initialMechanicalEnergy;
                 if (Math.abs(diff) > 1e-8 && initialMechanicalEnergy > 0) {
-                    // 按比例调整速度，保持动能与势能的比例不变
                     const scale = Math.sqrt((initialMechanicalEnergy - currentPotential) / Math.max(currentKinetic, 1e-10));
                     if (isFinite(scale) && scale > 0) {
                         ball.vx *= scale;
                         ball.vy *= scale;
-                        // 重新计算
                         const newEnergy = calcMechanicalEnergy(ball);
                         currentKinetic = newEnergy.kinetic;
                         currentPotential = newEnergy.potential;
@@ -753,10 +889,11 @@
 
         // ----- 物理更新 -----
         function physicsUpdate() {
+            if (isPaused) return;
+
             let dampCoeff = isIdealMode ? 0 : damping;
             let restCoeff = isIdealMode ? 1.0 : restitution;
 
-            // 理想模式下，不施加阻尼
             if (!isIdealMode) {
                 ball.vx *= (1 - dampCoeff * 0.4);
                 ball.vy *= (1 - dampCoeff * 0.4);
@@ -766,7 +903,6 @@
             ball.x += ball.vx;
             ball.y += ball.vy;
 
-            // 地面碰撞
             if (ball.y + ball.radius > GROUND_Y) {
                 ball.y = GROUND_Y - ball.radius;
                 if (Math.abs(ball.vy) > 0.3) {
@@ -779,7 +915,6 @@
                 }
             }
 
-            // 墙壁碰撞
             if (ball.x - ball.radius < LEFT_WALL) {
                 ball.x = LEFT_WALL + ball.radius;
                 ball.vx = -ball.vx * restCoeff;
@@ -788,10 +923,18 @@
                 ball.vx = -ball.vx * restCoeff;
             }
 
-            // 天花板
             if (ball.y - ball.radius < 20) {
                 ball.y = 20 + ball.radius;
                 ball.vy = -ball.vy * restCoeff;
+            }
+
+            // 记录轨迹（每隔2帧记录一个点，减少冗余）
+            if (showTrajectory && stepCount % 2 === 0) {
+                trajectoryPoints.push({ x: ball.x, y: ball.y });
+                // 限制轨迹点数量，防止性能问题
+                if (trajectoryPoints.length > 3000) {
+                    trajectoryPoints.splice(0, 100);
+                }
             }
 
             stepCount++;
@@ -808,6 +951,32 @@
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, 900, 560);
 
+            // 绘制轨迹
+            if (showTrajectory && trajectoryPoints.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(trajectoryPoints[0].x, trajectoryPoints[0].y);
+                for (let i = 1; i < trajectoryPoints.length; i++) {
+                    ctx.lineTo(trajectoryPoints[i].x, trajectoryPoints[i].y);
+                }
+                ctx.strokeStyle = 'rgba(220, 80, 40, 0.7)';
+                ctx.lineWidth = 2.5;
+                ctx.shadowColor = 'rgba(200, 60, 20, 0.2)';
+                ctx.shadowBlur = 6;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // 轨迹上的小点（点缀）
+                if (trajectoryPoints.length > 10) {
+                    for (let i = 0; i < trajectoryPoints.length; i += 12) {
+                        ctx.beginPath();
+                        ctx.arc(trajectoryPoints[i].x, trajectoryPoints[i].y, 2, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(200, 70, 30, 0.4)';
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // 地面
             ctx.fillStyle = '#6f92b0';
             ctx.shadowColor = 'rgba(0,0,0,0.1)';
             ctx.shadowBlur = 6;
@@ -820,6 +989,7 @@
             ctx.lineTo(900, GROUND_Y);
             ctx.stroke();
 
+            // 墙壁
             ctx.fillStyle = '#a8bfd8';
             ctx.shadowBlur = 4;
             ctx.fillRect(LEFT_WALL-6, 10, 6, GROUND_Y-10);
@@ -838,6 +1008,7 @@
             ctx.font = '11px "Segoe UI"';
             ctx.fillText('零势能面 (地面)', RIGHT_WALL-100, GROUND_Y-6);
 
+            // 小球
             const r = ball.radius;
             ctx.shadowColor = 'rgba(0,0,0,0.25)';
             ctx.shadowBlur = 14;
@@ -858,6 +1029,7 @@
             ctx.arc(ball.x-5, ball.y-7, r*0.25, 0, Math.PI*2);
             ctx.fill();
 
+            // 速度箭头
             ctx.shadowBlur = 0;
             ctx.strokeStyle = '#1f3a5e';
             ctx.lineWidth = 2.5;
@@ -874,6 +1046,7 @@
             ctx.fillText(`h = ${((GROUND_Y - ball.y)/100).toFixed(2)} m`, 20, 30);
             ctx.fillText(`m = ${ball.mass.toFixed(2)} kg`, 20, 50);
 
+            // 能量条
             const barX = 20, barY = 70, barW = 14, maxH = 140;
             const maxE = Math.max(currentMechanicalEnergy, initialMechanicalEnergy, 5);
             const drawBar = (x, y, ratio, color) => {
@@ -901,6 +1074,21 @@
                 ctx.fillStyle = '#1a6a3a';
                 ctx.font = 'bold 22px "Segoe UI"';
                 ctx.fillText('✨ 理想情况 · 无能量损失', 280, 80);
+            }
+
+            if (isPaused) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+                ctx.fillRect(0, 0, 900, 560);
+                ctx.fillStyle = '#1a3a5a';
+                ctx.font = 'bold 28px "Segoe UI"';
+                ctx.fillText('⏸ 已暂停', 380, 280);
+            }
+
+            // 轨迹开关状态指示
+            if (showTrajectory) {
+                ctx.fillStyle = 'rgba(200, 60, 30, 0.6)';
+                ctx.font = '12px "Segoe UI"';
+                ctx.fillText('📈 轨迹显示中', 780, 30);
             }
 
             ctx.shadowBlur = 0;
@@ -994,11 +1182,10 @@
             if (isDragging) {
                 isDragging = false;
                 canvas.style.cursor = 'grab';
-                // 释放时赋予小速度
                 ball.vx = (Math.random() - 0.5) * 1.5;
                 ball.vy = -1.2;
                 stepCount = 0;
-                // 重新固定初始能量（基于当前状态）
+                trajectoryPoints = [];
                 updateInitialEnergy();
                 updateReportAndBars();
                 e.preventDefault();
