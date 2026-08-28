@@ -592,64 +592,15 @@
         let currentKinetic = 0;
         let currentPotential = 0;
 
-        // 静止阈值（速度平方）
+        // ----- 静止阈值（速度平方） -----
         const REST_THRESHOLD = 0.02;
 
-        // ----- 判断小球是否静止 -----
-        function isBallAtRest() {
-            const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
-            const onGround = (ball.y + ball.radius >= GROUND_Y - 0.5);
-            return onGround && speedSq < REST_THRESHOLD;
-        }
-
-        // ----- 强制小球静止（彻底归零） -----
-        function forceBallRest() {
-            ball.vx = 0;
-            ball.vy = 0;
-            ball.y = GROUND_Y - ball.radius;
-            currentKinetic = 0;
-            currentPotential = 0;
-            currentMechanicalEnergy = 0;
-            energyLoss = initialMechanicalEnergy;
-        }
-
-        // ----- 轨迹开关 -----
-        trajectoryToggle.addEventListener('click', function(e) {
-            e.stopPropagation();
-            showTrajectory = !showTrajectory;
-            if (showTrajectory) {
-                trajectoryToggle.classList.add('active');
-                trajectoryPoints = [];
-            } else {
-                trajectoryToggle.classList.remove('active');
-                trajectoryPoints = [];
-            }
-        });
-
-        // ----- 暂停控制 -----
-        function togglePause() {
-            isPaused = !isPaused;
-            if (isPaused) {
-                pauseBtn.innerHTML = '<i class="fas fa-play"></i> 继续';
-                pauseBtn.classList.add('paused');
-                statusBadge.innerHTML = '<i class="fas fa-pause"></i> 已暂停';
-                statusBadge.className = 'status-badge paused';
-            } else {
-                pauseBtn.innerHTML = '<i class="fas fa-pause"></i> 暂停';
-                pauseBtn.classList.remove('paused');
-                statusBadge.innerHTML = '<i class="fas fa-play"></i> 运行中';
-                statusBadge.className = 'status-badge running';
-            }
-        }
-        pauseBtn.addEventListener('click', togglePause);
-
-        // ----- 计算机械能 (零势能面在地面) -----
-        // 修正：移除多余的 *100 标度因子，让能量单位保持自然 (J)
+        // ----- 计算机械能 (零势能面在地面，使用自然单位) -----
         function calcMechanicalEnergy(ballState) {
             const v = Math.sqrt(ballState.vx * ballState.vx + ballState.vy * ballState.vy);
             const h = Math.max(0, (GROUND_Y - ballState.y - ballState.radius) / 100);
             const kinetic = 0.5 * ballState.mass * v * v;
-            const potential = ballState.mass * GRAVITY * h;  // 移除 *100
+            const potential = ballState.mass * GRAVITY * h;
             return { kinetic, potential, total: kinetic + potential };
         }
 
@@ -690,14 +641,24 @@
 
         // ----- 更新报告 -----
         function updateReportAndBars() {
-            // ===== 第一步：检测静止状态，强制归零 =====
-            if (!isIdealMode && isBallAtRest()) {
-                forceBallRest();
+            // 检查静止状态 - 在地面上且速度极小
+            const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
+            const onGround = (ball.y + ball.radius >= GROUND_Y - 0.5);
+
+            if (!isIdealMode && onGround && speedSq < REST_THRESHOLD) {
+                // 彻底归零
+                ball.vx = 0;
+                ball.vy = 0;
+                ball.y = GROUND_Y - ball.radius;
+                currentKinetic = 0;
+                currentPotential = 0;
+                currentMechanicalEnergy = 0;
+                energyLoss = initialMechanicalEnergy;
                 updateDisplay(0, 0, 0, initialMechanicalEnergy);
                 return;
             }
 
-            // ===== 第二步：非静止状态，正常计算 =====
+            // 正常计算
             let energy = calcMechanicalEnergy(ball);
             currentKinetic = energy.kinetic;
             currentPotential = energy.potential;
@@ -722,10 +683,16 @@
                 energyLoss = Math.max(0, initialMechanicalEnergy - currentMechanicalEnergy);
             }
 
-            // ===== 第三步：二次检查，防止浮点误差残留 =====
-            const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
-            if (!isIdealMode && speedSq < REST_THRESHOLD && ball.y + ball.radius >= GROUND_Y - 0.5) {
-                forceBallRest();
+            // 二次检查：如果速度极小且在地面上，强制归零
+            if (!isIdealMode && ball.y + ball.radius >= GROUND_Y - 0.5 && 
+                ball.vx * ball.vx + ball.vy * ball.vy < REST_THRESHOLD) {
+                ball.vx = 0;
+                ball.vy = 0;
+                ball.y = GROUND_Y - ball.radius;
+                currentKinetic = 0;
+                currentPotential = 0;
+                currentMechanicalEnergy = 0;
+                energyLoss = initialMechanicalEnergy;
                 updateDisplay(0, 0, 0, initialMechanicalEnergy);
                 return;
             }
@@ -735,13 +702,20 @@
 
         // ----- 统一显示更新 -----
         function updateDisplay(kinetic, potential, mechanical, loss) {
+            // 显示高度
             const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
             heightDisplay.textContent = h.toFixed(2);
 
-            reportKinetic.textContent = kinetic.toFixed(2);
-            reportPotential.textContent = potential.toFixed(2);
-            reportMechanical.textContent = mechanical.toFixed(2);
-            energyLossSpan.textContent = loss.toFixed(3);
+            // 显示能量 - 如果机械能小于0.001，直接显示0.00
+            const showKinetic = mechanical < 0.001 ? 0 : kinetic;
+            const showPotential = mechanical < 0.001 ? 0 : potential;
+            const showMechanical = mechanical < 0.001 ? 0 : mechanical;
+            const showLoss = mechanical < 0.001 ? initialMechanicalEnergy : loss;
+
+            reportKinetic.textContent = showKinetic.toFixed(2);
+            reportPotential.textContent = showPotential.toFixed(2);
+            reportMechanical.textContent = showMechanical.toFixed(2);
+            energyLossSpan.textContent = showLoss.toFixed(3);
             stepCounterSpan.textContent = stepCount;
 
             const maxScale = Math.max(mechanical, initialMechanicalEnergy, 5);
@@ -815,6 +789,7 @@
             ball.x += ball.vx;
             ball.y += ball.vy;
 
+            // 地面碰撞
             if (ball.y + ball.radius > GROUND_Y) {
                 ball.y = GROUND_Y - ball.radius;
                 if (Math.abs(ball.vy) > 0.05) {
@@ -827,6 +802,7 @@
                 }
             }
 
+            // 墙壁碰撞
             if (ball.x - ball.radius < LEFT_WALL) {
                 ball.x = LEFT_WALL + ball.radius;
                 ball.vx = -ball.vx * restCoeff;
@@ -835,11 +811,13 @@
                 ball.vx = -ball.vx * restCoeff;
             }
 
+            // 天花板
             if (ball.y - ball.radius < 20) {
                 ball.y = 20 + ball.radius;
                 ball.vy = -ball.vy * restCoeff;
             }
 
+            // 速度极小时强制静止
             const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
             if (!isIdealMode && speedSq < REST_THRESHOLD) {
                 ball.vx = 0;
@@ -849,6 +827,7 @@
                 }
             }
 
+            // 记录轨迹
             if (showTrajectory && stepCount % 2 === 0) {
                 trajectoryPoints.push({ x: ball.x, y: ball.y });
                 if (trajectoryPoints.length > 3000) {
