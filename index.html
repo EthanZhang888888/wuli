@@ -388,6 +388,44 @@
         .energy-bar-fill.kinetic { background: #e67e22; }
         .energy-bar-fill.potential { background: #2e86de; }
         .energy-bar-fill.mechanical { background: #27ae60; }
+        .chart-wrap {
+            background: #f4faff;
+            border-radius: 20px;
+            padding: 10px 10px 6px;
+            margin-bottom: 14px;
+            border: 1px solid #e2edfb;
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 0.78rem;
+            color: #567394;
+        }
+        .chart-legend {
+            display: flex;
+            gap: 10px;
+            font-size: 0.7rem;
+        }
+        .chart-legend span {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        #energyChart {
+            display: block;
+            width: 100%;
+            height: 120px;
+            background: #ffffff;
+            border-radius: 12px;
+        }
         .action-buttons {
             display: flex;
             flex-direction: column;
@@ -533,6 +571,18 @@
                 <p id="angleDisplayRow" style="display:none;"><span>摆角 θ</span> <span class="highlight" id="angleDisplay">0.0</span>°</p>
             </div>
 
+            <div class="chart-wrap">
+                <div class="chart-header">
+                    <span>📈 能量随时间变化</span>
+                    <div class="chart-legend">
+                        <span><span class="legend-dot" style="background:#e67e22;"></span>Ek</span>
+                        <span><span class="legend-dot" style="background:#2e86de;"></span>Ep</span>
+                        <span><span class="legend-dot" style="background:#27ae60;"></span>E</span>
+                    </div>
+                </div>
+                <canvas id="energyChart" width="640" height="240"></canvas>
+            </div>
+
             <div class="action-buttons">
                 <button class="btn-primary" id="exportReportBtn"><i class="fas fa-file-pdf"></i> 导出完整报告 (付费)</button>
                 <button class="btn-outline" id="exportQuestionBtn"><i class="fas fa-file-export"></i> 导出题目 & 数据 (付费)</button>
@@ -552,6 +602,8 @@
         // ===== DOM 元素 =====
         const canvas = document.getElementById('physicsCanvas');
         const ctx = canvas.getContext('2d');
+        const energyChart = document.getElementById('energyChart');
+        const ectx = energyChart.getContext('2d');
 
         const massSlider = document.getElementById('massSlider');
         const velocitySlider = document.getElementById('velocitySlider');
@@ -637,6 +689,25 @@
         const REST_THRESHOLD = 0.02;
         const ZERO_THRESHOLD = 0.04;
 
+        // ===== 能量历史（新增） =====
+        const MAX_HISTORY = 300;
+        let energyHistory = [];
+
+        function recordEnergy() {
+            energyHistory.push({
+                ek: displayKinetic,
+                ep: displayPotential,
+                e: displayMechanical
+            });
+            if (energyHistory.length > MAX_HISTORY) {
+                energyHistory.shift();
+            }
+        }
+
+        function clearEnergyHistory() {
+            energyHistory = [];
+        }
+
         // ===== 模型切换 =====
         function switchModel(model) {
             currentModel = model;
@@ -666,7 +737,8 @@
             if (currentModel === 'pendulum') {
                 const len = pendulumState.length;
                 const angle = pendulumState.angle;
-                h = len * (1 - Math.cos(angle)) / 100;
+                const lenMeters = len / 100;
+                h = lenMeters * (1 - Math.cos(angle));
             } else {
                 h = Math.max(0, (GROUND_Y - ballState.y - ballState.radius) / 100);
             }
@@ -733,38 +805,54 @@
 
             stepCount = 0;
             trajectoryPoints = [];
+            clearEnergyHistory();
             updateInitialEnergy();
             updateReportAndBars();
+            drawEnergyChart();
         }
 
-        // ===== 单摆物理 =====
+        // ===== 单摆物理（修正版） =====
         function updatePendulum() {
             const len = pendulumState.length;
             const g = GRAVITY * 100;
             const dampCoeff = isIdealMode ? 0 : damping;
 
-            const alpha = -(g / len) * Math.sin(pendulumState.angle) - dampCoeff * pendulumState.omega;
+            // 阻尼和摆长关联：摆长越长，有效阻尼越大
+            const effectiveDamp = dampCoeff * (1 + len / 500);
+
+            // 角加速度 = 重力回复力 + 阻尼
+            const alpha = -(g / len) * Math.sin(pendulumState.angle) - effectiveDamp * pendulumState.omega;
+
+            // 半隐式欧拉法
             pendulumState.omega += alpha;
-            if (!isIdealMode) {
-                pendulumState.omega *= (1 - dampCoeff * 0.3);
-            }
             pendulumState.angle += pendulumState.omega;
 
+            // 更新球的位置
             ball.x = PENDULUM_PIVOT_X + len * Math.sin(pendulumState.angle);
             ball.y = PENDULUM_PIVOT_Y + len * Math.cos(pendulumState.angle);
 
+            // 更新球的速度分量
             const speed = len * Math.abs(pendulumState.omega);
             const angle = pendulumState.angle;
             ball.vx = speed * Math.cos(angle);
             ball.vy = -speed * Math.sin(angle);
 
-            if (Math.abs(pendulumState.angle) < 0.005 && Math.abs(pendulumState.omega) < 0.001) {
-                pendulumState.angle = 0;
-                pendulumState.omega = 0;
-                ball.vx = 0;
-                ball.vy = 0;
-                ball.x = PENDULUM_PIVOT_X;
-                ball.y = PENDULUM_PIVOT_Y + len;
+            // 修正停止条件：平滑衰减，不突然归零
+            if (!isIdealMode) {
+                const visibleThreshold = 0.02;
+                if (Math.abs(pendulumState.angle) < visibleThreshold &&
+                    Math.abs(pendulumState.omega) < 0.01) {
+                    pendulumState.omega *= 0.95;
+                    pendulumState.angle *= 0.95;
+                    if (Math.abs(pendulumState.omega) < 0.0005) {
+                        pendulumState.angle = 0;
+                        pendulumState.omega = 0;
+                        ball.vx = 0;
+                        ball.vy = 0;
+                        ball.x = PENDULUM_PIVOT_X;
+                        ball.y = PENDULUM_PIVOT_Y + len;
+                    }
+                }
             }
         }
 
@@ -775,7 +863,6 @@
 
             if (currentModel === 'pendulum') {
                 updatePendulum();
-                // ★ 每帧记录轨迹，让圆弧更密集
                 if (showTrajectory) {
                     trajectoryPoints.push({ x: ball.x, y: ball.y });
                     if (trajectoryPoints.length > 5000) trajectoryPoints.splice(0, 100);
@@ -840,6 +927,8 @@
         function updateReportAndBars() {
             if (isStopped) {
                 updateDisplay(0, 0, 0, initialMechanicalEnergy);
+                recordEnergy();
+                drawEnergyChart();
                 return;
             }
 
@@ -848,12 +937,14 @@
                 if (ball.y + ball.radius >= GROUND_Y - 0.5 && speedSq < REST_THRESHOLD) {
                     forceBallRest();
                     updateDisplay(0, 0, 0, initialMechanicalEnergy);
+                    recordEnergy();
+                    drawEnergyChart();
                     return;
                 }
             }
 
             if (currentModel === 'pendulum' && !isIdealMode) {
-                if (Math.abs(pendulumState.angle) < 0.005 && Math.abs(pendulumState.omega) < 0.001) {
+                if (Math.abs(pendulumState.angle) < 0.0005 && Math.abs(pendulumState.omega) < 0.0005) {
                     pendulumState.angle = 0;
                     pendulumState.omega = 0;
                     ball.vx = 0;
@@ -866,6 +957,8 @@
                     displayMechanical = 0;
                     displayLoss = initialMechanicalEnergy;
                     updateDisplay(0, 0, 0, initialMechanicalEnergy);
+                    recordEnergy();
+                    drawEnergyChart();
                     return;
                 }
             }
@@ -892,9 +985,6 @@
                         rawMechanical = newEnergy.total;
                     }
                 }
-                rawKinetic = rawKinetic;
-                rawPotential = rawPotential;
-                rawMechanical = rawMechanical;
                 displayLoss = 0;
             } else {
                 displayLoss = Math.max(0, initialMechanicalEnergy - rawMechanical);
@@ -909,6 +999,8 @@
                 if (rawMechanical < ZERO_THRESHOLD) {
                     forceBallRest();
                     updateDisplay(0, 0, 0, initialMechanicalEnergy);
+                    recordEnergy();
+                    drawEnergyChart();
                     return;
                 }
             }
@@ -918,6 +1010,8 @@
             displayMechanical = rawMechanical;
 
             updateDisplay(displayKinetic, displayPotential, displayMechanical, displayLoss);
+            recordEnergy();
+            drawEnergyChart();
         }
 
         function updateDisplay(kinetic, potential, mechanical, loss) {
@@ -925,7 +1019,8 @@
             if (currentModel === 'pendulum') {
                 const len = pendulumState.length;
                 const angle = pendulumState.angle;
-                h = len * (1 - Math.cos(angle)) / 100;
+                const lenMeters = len / 100;
+                h = lenMeters * (1 - Math.cos(angle));
                 angleDeg = angle * 180 / Math.PI;
                 angleDisplay.textContent = angleDeg.toFixed(1);
             } else {
@@ -943,6 +1038,86 @@
             kineticBar.style.width = (Math.min(kinetic / maxScale, 1) * 100) + '%';
             potentialBar.style.width = (Math.min(potential / maxScale, 1) * 100) + '%';
             mechanicalBar.style.width = (Math.min(mechanical / maxScale, 1) * 100) + '%';
+        }
+
+        // ===== 能量曲线图（新增） =====
+        function drawEnergyChart() {
+            const w = energyChart.width;
+            const h = energyChart.height;
+            ectx.clearRect(0, 0, w, h);
+
+            // 背景
+            ectx.fillStyle = '#ffffff';
+            ectx.fillRect(0, 0, w, h);
+
+            // 网格
+            ectx.strokeStyle = '#e8f0f8';
+            ectx.lineWidth = 1;
+            for (let i = 1; i < 4; i++) {
+                const y = (h / 4) * i;
+                ectx.beginPath();
+                ectx.moveTo(0, y);
+                ectx.lineTo(w, y);
+                ectx.stroke();
+            }
+
+            if (energyHistory.length < 2) {
+                ectx.fillStyle = '#a8bdd4';
+                ectx.font = '13px "Segoe UI"';
+                ectx.textAlign = 'center';
+                ectx.fillText('数据采集中...', w / 2, h / 2);
+                ectx.textAlign = 'left';
+                return;
+            }
+
+            // 找最大值
+            let maxE = 1;
+            for (let i = 0; i < energyHistory.length; i++) {
+                const p = energyHistory[i];
+                maxE = Math.max(maxE, p.ek, p.ep, p.e);
+            }
+            maxE = Math.ceil(maxE * 1.15);
+
+            const padLeft = 30;
+            const padRight = 8;
+            const padTop = 8;
+            const padBottom = 16;
+            const plotW = w - padLeft - padRight;
+            const plotH = h - padTop - padBottom;
+
+            // Y 轴标签
+            ectx.fillStyle = '#8aa4bd';
+            ectx.font = '10px "Segoe UI"';
+            ectx.textAlign = 'right';
+            ectx.fillText(maxE.toFixed(1), padLeft - 4, padTop + 8);
+            ectx.fillText((maxE / 2).toFixed(1), padLeft - 4, padTop + plotH / 2 + 3);
+            ectx.fillText('0', padLeft - 4, padTop + plotH);
+            ectx.textAlign = 'left';
+
+            // 画线
+            const drawLine = (key, color) => {
+                ectx.beginPath();
+                ectx.strokeStyle = color;
+                ectx.lineWidth = 2;
+                ectx.lineJoin = 'round';
+                for (let i = 0; i < energyHistory.length; i++) {
+                    const x = padLeft + (i / (MAX_HISTORY - 1)) * plotW;
+                    const y = padTop + plotH - (energyHistory[i][key] / maxE) * plotH;
+                    if (i === 0) ectx.moveTo(x, y);
+                    else ectx.lineTo(x, y);
+                }
+                ectx.stroke();
+            };
+
+            drawLine('ek', '#e67e22');
+            drawLine('ep', '#2e86de');
+            drawLine('e', '#27ae60');
+
+            // 图例文字
+            ectx.fillStyle = '#8aa4bd';
+            ectx.font = '10px "Segoe UI"';
+            ectx.textAlign = 'left';
+            ectx.fillText('时间 →', w - 50, h - 3);
         }
 
         function updateSlidersDisplay() {
@@ -1140,6 +1315,7 @@
                 }
                 stepCount = 0;
                 trajectoryPoints = [];
+                clearEnergyHistory();
                 isStopped = false;
                 updateInitialEnergy();
                 updateReportAndBars();
@@ -1164,7 +1340,6 @@
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, 900, 560);
 
-            // ★ 轨迹：用平滑曲线连接所有点，显示完整圆弧
             if (showTrajectory && trajectoryPoints.length > 1) {
                 ctx.beginPath();
                 ctx.moveTo(trajectoryPoints[0].x, trajectoryPoints[0].y);
@@ -1178,7 +1353,6 @@
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
-                // 轨迹上的小点（稀疏显示，不遮挡视线）
                 if (trajectoryPoints.length > 20) {
                     const step = Math.max(1, Math.floor(trajectoryPoints.length / 80));
                     for (let i = 0; i < trajectoryPoints.length; i += step) {
@@ -1190,7 +1364,6 @@
                 }
             }
 
-            // 单摆绘图
             if (currentModel === 'pendulum') {
                 ctx.beginPath();
                 ctx.arc(PENDULUM_PIVOT_X, PENDULUM_PIVOT_Y, 8, 0, Math.PI * 2);
@@ -1207,7 +1380,6 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // ★ 绘制完整的参考圆弧（摆长轨迹）
                 const len = pendulumState.length;
                 ctx.beginPath();
                 ctx.arc(PENDULUM_PIVOT_X, PENDULUM_PIVOT_Y, len, -Math.PI/2.5, Math.PI/2.5);
@@ -1239,7 +1411,6 @@
                 ctx.fillText('最低点', lowX + 10, lowY + 4);
 
             } else {
-                // 自由落体
                 ctx.fillStyle = '#6f92b0';
                 ctx.shadowColor = 'rgba(0,0,0,0.1)';
                 ctx.shadowBlur = 6;
@@ -1271,7 +1442,6 @@
                 ctx.fillText('零势能面 (地面)', RIGHT_WALL-100, GROUND_Y-6);
             }
 
-            // 小球
             const r = ball.radius;
             ctx.shadowColor = 'rgba(0,0,0,0.25)';
             ctx.shadowBlur = 14;
@@ -1292,7 +1462,6 @@
             ctx.arc(ball.x-5, ball.y-7, r*0.25, 0, Math.PI*2);
             ctx.fill();
 
-            // ★ 速度箭头：只在暂停时显示
             ctx.shadowBlur = 0;
             const speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
             if (isPaused && speed > 0.02) {
@@ -1330,7 +1499,6 @@
                 ctx.fillText(`m = ${ball.mass.toFixed(2)} kg`, 20, 50);
             }
 
-            // 能量条
             const barX = 20, barY = 70, barW = 14, maxH = 140;
             const maxE = Math.max(displayMechanical, initialMechanicalEnergy, 5);
             const drawBar = (x, y, ratio, color) => {
@@ -1383,7 +1551,8 @@
             if (currentModel === 'pendulum') {
                 const len = pendulumState.length;
                 const a = pendulumState.angle;
-                h = len * (1 - Math.cos(a)) / 100;
+                const lenMeters = len / 100;
+                h = lenMeters * (1 - Math.cos(a));
                 angle = a * 180 / Math.PI;
             } else {
                 h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
