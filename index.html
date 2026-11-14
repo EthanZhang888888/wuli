@@ -535,11 +535,11 @@
                     <label><i class="fas fa-ruler"></i> 摆长 L <span class="param-value" id="lengthVal">1.5</span> m</label>
                     <input type="range" id="lengthSlider" min="0.5" max="2.5" step="0.05" value="1.5">
                 </div>
-                <div class="param-item">
+                <div class="param-item" id="paramDamping">
                     <label><i class="fas fa-droplet"></i> 阻尼 b <span class="param-value" id="dampVal">0.02</span></label>
                     <input type="range" id="dampingSlider" min="0.00" max="0.10" step="0.002" value="0.02">
                 </div>
-                <div class="param-item">
+                <div class="param-item" id="paramRestitution">
                     <label><i class="fas fa-arrows-spin"></i> 恢复系数 e <span class="param-value" id="restitutionVal">0.85</span></label>
                     <input type="range" id="restitutionSlider" min="0.30" max="1.00" step="0.01" value="0.85">
                 </div>
@@ -643,6 +643,9 @@
         const trajectoryToggle = document.getElementById('trajectoryToggle');
         const modelSelector = document.getElementById('modelSelector');
 
+        const paramDamping = document.getElementById('paramDamping');
+        const paramRestitution = document.getElementById('paramRestitution');
+
         // ===== 状态 =====
         let currentModel = 'bounce';
         let isPaused = false;
@@ -674,6 +677,9 @@
             omega: 0,
             length: 150,
         };
+        // 高中物理单摆：初始摆角 + 时间累积
+        let pendulumInitialAngle = 30 * Math.PI / 180;
+        let pendulumTime = 0;
 
         let stepCount = 0;
         let initialMechanicalEnergy = 0;
@@ -708,89 +714,34 @@
             energyHistory = [];
         }
 
-        // ===== 单摆物理（RK4 精确版） =====
-        function pendulumAcceleration(angle, omega, len, g, b) {
-            // 角加速度 = 重力回复力 + 空气阻力（与速度平方相关）
-            const gravityTerm = -(g / len) * Math.sin(angle);
-            const dragTerm = -b * omega * Math.abs(omega);
-            return gravityTerm + dragTerm;
-        }
-
-        function rk4Step(angle, omega, len, g, b, dt) {
-            const k1a = omega;
-            const k1w = pendulumAcceleration(angle, omega, len, g, b);
-
-            const k2a = omega + 0.5 * dt * k1w;
-            const k2w = pendulumAcceleration(angle + 0.5 * dt * k1a, omega + 0.5 * dt * k1w, len, g, b);
-
-            const k3a = omega + 0.5 * dt * k2w;
-            const k3w = pendulumAcceleration(angle + 0.5 * dt * k2a, omega + 0.5 * dt * k2w, len, g, b);
-
-            const k4a = omega + dt * k3w;
-            const k4w = pendulumAcceleration(angle + dt * k3a, omega + dt * k3w, len, g, b);
-
-            const newAngle = angle + (dt / 6) * (k1a + 2 * k2a + 2 * k3a + k4a);
-            const newOmega = omega + (dt / 6) * (k1w + 2 * k2w + 2 * k3w + k4w);
-
-            return { angle: newAngle, omega: newOmega };
-        }
-
-        // 物理步长（秒）：1/240，比渲染帧率更细
-        const PHYSICS_DT = 1 / 240;
-        // 重力加速度（像素/秒²）
-        const PENDULUM_G = 9.8 * 100;
-
-        let physicsAccumulator = 0;
+        // ===== 单摆物理（高中物理理想模型） =====
+        // 依据：人教版选择性必修第一册"机械振动"
+        // 单摆是理想化模型，空气阻力可忽略，做等幅简谐运动
+        // 周期 T = 2π√(L/g)，角频率 ω₀ = √(g/L)
+        // 摆角 θ(t) = θ₀ · cos(ω₀t)
+        const PENDULUM_G = 9.8 * 100; // 像素/秒²，与摆长单位匹配
 
         function updatePendulum() {
             const len = pendulumState.length;
-            const b = isIdealMode ? 0 : damping * 2.0;
-            const g = PENDULUM_G;
+            // 角频率 ω₀ = √(g/L)
+            const omega0 = Math.sqrt(PENDULUM_G / len);
 
-            // 累加器：把一帧的时间拆成多个物理步
-            physicsAccumulator += 1 / 60;
-            let steps = 0;
-            while (physicsAccumulator >= PHYSICS_DT && steps < 10) {
-                const result = rk4Step(pendulumState.angle, pendulumState.omega, len, g, b, PHYSICS_DT);
-                pendulumState.angle = result.angle;
-                pendulumState.omega = result.omega;
-                physicsAccumulator -= PHYSICS_DT;
-                steps++;
-            }
+            // 时间累积（秒）
+            pendulumTime += 1 / 60;
 
-            // 角度归一化到 [-π, π]，避免累积过大
-            if (pendulumState.angle > Math.PI) {
-                pendulumState.angle -= 2 * Math.PI;
-            } else if (pendulumState.angle < -Math.PI) {
-                pendulumState.angle += 2 * Math.PI;
-            }
+            // 简谐运动：θ(t) = θ₀ · cos(ω₀t)
+            pendulumState.angle = pendulumInitialAngle * Math.cos(omega0 * pendulumTime);
+            // 角速度：dθ/dt = -θ₀ · ω₀ · sin(ω₀t)
+            pendulumState.omega = -pendulumInitialAngle * omega0 * Math.sin(omega0 * pendulumTime);
 
             // 更新球的位置
             ball.x = PENDULUM_PIVOT_X + len * Math.sin(pendulumState.angle);
             ball.y = PENDULUM_PIVOT_Y + len * Math.cos(pendulumState.angle);
 
-            // 更新球的速度分量
+            // 更新球的速度分量（用于显示速度矢量）
             const speed = len * Math.abs(pendulumState.omega);
-            const angle = pendulumState.angle;
-            ball.vx = speed * Math.cos(angle);
-            ball.vy = -speed * Math.sin(angle);
-
-            // 平滑停止：只有实际模式才停
-            if (!isIdealMode) {
-                if (Math.abs(pendulumState.angle) < 0.01 &&
-                    Math.abs(pendulumState.omega) < 0.02) {
-                    pendulumState.omega *= 0.98;
-                    pendulumState.angle *= 0.98;
-                    if (Math.abs(pendulumState.omega) < 0.001) {
-                        pendulumState.angle = 0;
-                        pendulumState.omega = 0;
-                        ball.vx = 0;
-                        ball.vy = 0;
-                        ball.x = PENDULUM_PIVOT_X;
-                        ball.y = PENDULUM_PIVOT_Y + len;
-                    }
-                }
-            }
+            ball.vx = speed * Math.cos(pendulumState.angle);
+            ball.vy = -speed * Math.sin(pendulumState.angle);
         }
 
         // ===== 模型切换 =====
@@ -802,6 +753,9 @@
             document.getElementById('paramVelocity').style.display = model === 'bounce' ? '' : 'none';
             document.getElementById('paramAngle').style.display = model === 'pendulum' ? '' : 'none';
             document.getElementById('paramLength').style.display = model === 'pendulum' ? '' : 'none';
+            // 高中物理单摆无阻尼，隐藏阻尼滑块
+            paramDamping.style.display = model === 'pendulum' ? 'none' : '';
+            paramRestitution.style.display = model === 'pendulum' ? 'none' : '';
             heightLabel.textContent = model === 'bounce' ? '高度 h' : '高度 h (相对最低点)';
             angleDisplayRow.style.display = model === 'pendulum' ? '' : 'none';
             isStopped = false;
@@ -877,9 +831,13 @@
                 ball.vx = initialVelocity * 0.9;
                 ball.vy = -1.5;
             } else {
+                // 高中物理单摆：记录初始摆角和时间
                 const angleRad = parseFloat(angleSlider.value) * Math.PI / 180;
                 const len = parseFloat(lengthSlider.value) * 100;
                 pendulumState.length = len;
+                pendulumInitialAngle = angleRad;
+                pendulumTime = 0;
+                // 初始时刻 t=0，θ(0) = θ₀，ω(0) = 0
                 pendulumState.angle = angleRad;
                 pendulumState.omega = 0;
                 ball.x = PENDULUM_PIVOT_X + len * Math.sin(angleRad);
@@ -894,7 +852,6 @@
             updateInitialEnergy();
             updateReportAndBars();
             drawEnergyChart();
-            physicsAccumulator = 0;
         }
 
         // ===== 物理更新 =====
@@ -973,30 +930,23 @@
                 return;
             }
 
+            // 单摆模式：高中物理理想模型，机械能始终守恒，不进入停止判断
+            if (currentModel === 'pendulum') {
+                const energy = calcMechanicalEnergy(ball);
+                displayKinetic = energy.kinetic;
+                displayPotential = energy.potential;
+                displayMechanical = energy.total;
+                displayLoss = 0;
+                updateDisplay(displayKinetic, displayPotential, displayMechanical, displayLoss);
+                recordEnergy();
+                drawEnergyChart();
+                return;
+            }
+
             if (!isIdealMode && currentModel === 'bounce') {
                 const speedSq = ball.vx * ball.vx + ball.vy * ball.vy;
                 if (ball.y + ball.radius >= GROUND_Y - 0.5 && speedSq < REST_THRESHOLD) {
                     forceBallRest();
-                    updateDisplay(0, 0, 0, initialMechanicalEnergy);
-                    recordEnergy();
-                    drawEnergyChart();
-                    return;
-                }
-            }
-
-            if (currentModel === 'pendulum' && !isIdealMode) {
-                if (Math.abs(pendulumState.angle) < 0.0005 && Math.abs(pendulumState.omega) < 0.0005) {
-                    pendulumState.angle = 0;
-                    pendulumState.omega = 0;
-                    ball.vx = 0;
-                    ball.vy = 0;
-                    ball.x = PENDULUM_PIVOT_X;
-                    ball.y = PENDULUM_PIVOT_Y + pendulumState.length;
-                    isStopped = true;
-                    displayKinetic = 0;
-                    displayPotential = 0;
-                    displayMechanical = 0;
-                    displayLoss = initialMechanicalEnergy;
                     updateDisplay(0, 0, 0, initialMechanicalEnergy);
                     recordEnergy();
                     drawEnergyChart();
@@ -1017,8 +967,6 @@
                         if (currentModel === 'bounce') {
                             ball.vx *= scale;
                             ball.vy *= scale;
-                        } else {
-                            pendulumState.omega *= scale;
                         }
                         const newEnergy = calcMechanicalEnergy(ball);
                         rawKinetic = newEnergy.kinetic;
@@ -1210,11 +1158,14 @@
             ball.radius = 16 + mass * 3.5;
 
             if (currentModel === 'pendulum') {
+                const angleRad = parseFloat(angleSlider.value) * Math.PI / 180;
                 pendulumState.length = parseFloat(lengthSlider.value) * 100;
-                pendulumState.angle = parseFloat(angleSlider.value) * Math.PI / 180;
+                pendulumInitialAngle = angleRad;
+                pendulumTime = 0;
+                pendulumState.angle = angleRad;
                 pendulumState.omega = 0;
-                ball.x = PENDULUM_PIVOT_X + pendulumState.length * Math.sin(pendulumState.angle);
-                ball.y = PENDULUM_PIVOT_Y + pendulumState.length * Math.cos(pendulumState.angle);
+                ball.x = PENDULUM_PIVOT_X + pendulumState.length * Math.sin(angleRad);
+                ball.y = PENDULUM_PIVOT_Y + pendulumState.length * Math.cos(angleRad);
                 ball.vx = 0;
                 ball.vy = 0;
             }
@@ -1314,6 +1265,8 @@
                 }
                 const angle = Math.atan2(newX - PENDULUM_PIVOT_X, newY - PENDULUM_PIVOT_Y);
                 pendulumState.angle = angle;
+                pendulumInitialAngle = angle;
+                pendulumTime = 0;
                 pendulumState.omega = 0;
                 ball.x = newX;
                 ball.y = newY;
@@ -1343,7 +1296,8 @@
                 isDragging = false;
                 canvas.style.cursor = 'grab';
                 if (currentModel === 'pendulum') {
-                    pendulumState.omega = (Math.random() - 0.5) * 0.02;
+                    // 高中物理单摆：松手后从静止释放，按简谐运动规律摆动
+                    pendulumTime = 0;
                 } else {
                     ball.vx = (Math.random() - 0.5) * 1.5;
                     ball.vy = -1.2;
@@ -1351,7 +1305,6 @@
                 stepCount = 0;
                 trajectoryPoints = [];
                 clearEnergyHistory();
-                physicsAccumulator = 0;
                 isStopped = false;
                 updateInitialEnergy();
                 updateReportAndBars();
@@ -1527,15 +1480,18 @@
             ctx.font = '13px "Segoe UI"';
             if (currentModel === 'pendulum') {
                 const a = pendulumState.angle;
+                const lenM = pendulumState.length / 100;
+                const T = 2 * Math.PI * Math.sqrt(lenM / 9.8);
                 ctx.fillText(`θ = ${(a * 180 / Math.PI).toFixed(1)}°`, 20, 30);
-                ctx.fillText(`L = ${(pendulumState.length/100).toFixed(2)} m`, 20, 50);
+                ctx.fillText(`L = ${lenM.toFixed(2)} m`, 20, 50);
+                ctx.fillText(`T = ${T.toFixed(2)} s`, 20, 70);
             } else {
                 const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
                 ctx.fillText(`h = ${h.toFixed(2)} m`, 20, 30);
                 ctx.fillText(`m = ${ball.mass.toFixed(2)} kg`, 20, 50);
             }
 
-            const barX = 20, barY = 70, barW = 14, maxH = 140;
+            const barX = 20, barY = 90, barW = 14, maxH = 140;
             const maxE = Math.max(displayMechanical, initialMechanicalEnergy, 5);
             const drawBar = (x, y, ratio, color) => {
                 const h = Math.min(ratio, 1) * maxH;
@@ -1596,14 +1552,19 @@
             const v = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy).toFixed(2);
             const modeStr = isIdealMode ? '✨ 理想情况 (无能量损失)' : '实际情况 (有阻尼)';
             const modelStr = currentModel === 'pendulum' ? '单摆' : '自由落体/碰撞';
+            let extraInfo = '';
+            if (currentModel === 'pendulum') {
+                const lenM = pendulumState.length / 100;
+                const T = 2 * Math.PI * Math.sqrt(lenM / 9.8);
+                extraInfo = `理论周期 T = ${T.toFixed(2)} s\n`;
+            }
             const reportText = `📐 物理实验报告
             ==========================
             模型: ${modelStr}
             模式: ${modeStr}
             质量 m = ${mass.toFixed(2)} kg
             ${currentModel === 'pendulum' ? `摆长 L = ${(pendulumState.length/100).toFixed(2)} m` : `初速度 v₀ = ${initialVelocity.toFixed(2)} m/s`}
-            阻尼 b = ${(isIdealMode ? 0 : damping).toFixed(3)}
-            恢复系数 e = ${(isIdealMode ? 1.0 : restitution).toFixed(2)}
+            ${currentModel === 'pendulum' ? extraInfo : `阻尼 b = ${(isIdealMode ? 0 : damping).toFixed(3)}\n恢复系数 e = ${(isIdealMode ? 1.0 : restitution).toFixed(2)}`}
             ---------------------------------
             ${currentModel === 'pendulum' ? `摆角 θ = ${angle.toFixed(1)}°` : `高度 h = ${h.toFixed(2)} m`}
             速度 v = ${v} m/s
