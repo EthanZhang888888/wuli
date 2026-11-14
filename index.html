@@ -6,604 +6,994 @@
     <title>物理沙盒</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
+        :root {
+            --bg-0: #070b14;
+            --bg-1: #0c1220;
+            --bg-2: #111a2e;
+            --glass: rgba(18, 28, 46, 0.65);
+            --glass-strong: rgba(22, 34, 54, 0.85);
+            --border: rgba(120, 180, 255, 0.10);
+            --border-strong: rgba(120, 180, 255, 0.20);
+            --text-0: #eaf2ff;
+            --text-1: #a8b8d4;
+            --text-2: #6b7d99;
+            --accent: #4fc3f7;
+            --accent-2: #7c6cff;
+            --accent-glow: rgba(79, 195, 247, 0.35);
+            --green: #34d399;
+            --orange: #fb923c;
+            --blue: #60a5fa;
+            --red: #f87171;
+            --radius-lg: 28px;
+            --radius-md: 18px;
+            --radius-sm: 12px;
+            --shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.6), 0 8px 24px -8px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.4);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, system-ui, sans-serif; }
+
+        html, body { height: 100%; }
+
         body {
-            background: linear-gradient(145deg, #f0f7fe 0%, #dce8f5 100%);
+            background: var(--bg-0);
+            color: var(--text-0);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 24px;
+            position: relative;
+            overflow-x: hidden;
         }
-        .sandbox-container {
-            max-width: 1400px;
+
+        /* 背景光晕 */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 20% 0%, rgba(79, 195, 247, 0.08), transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(124, 108, 255, 0.08), transparent 60%),
+                radial-gradient(ellipse 50% 30% at 50% 50%, rgba(52, 211, 153, 0.03), transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app {
             width: 100%;
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-radius: 48px;
-            box-shadow: 0 25px 50px -10px rgba(0, 20, 40, 0.3), inset 0 1px 2px rgba(255,255,255,0.6);
-            padding: 28px 30px 36px;
-            border: 1px solid rgba(255,255,255,0.6);
+            max-width: 1480px;
+            position: relative;
+            z-index: 1;
+            animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== Header ===== */
         .header {
             display: flex;
             flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 28px;
+            margin-bottom: 32px;
+            gap: 16px;
         }
-        .header h1 {
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #0a1020;
+            box-shadow: 0 8px 24px -4px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        .brand-text h1 {
+            font-size: 1.5rem;
             font-weight: 700;
-            font-size: 2.0rem;
-            letter-spacing: -0.5px;
-            color: #0b2a47;
-            display: flex;
-            align-items: center;
-            gap: 14px;
+            letter-spacing: -0.03em;
+            color: var(--text-0);
+            line-height: 1.2;
         }
-        .header h1 i {
-            background: #1a4b7a;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 40px;
-            font-size: 1.6rem;
-            box-shadow: 0 8px 14px -6px rgba(20, 60, 120, 0.3);
+
+        .brand-text p {
+            font-size: 0.78rem;
+            color: var(--text-2);
+            margin-top: 2px;
+            letter-spacing: 0.02em;
         }
+
         .badge-pro {
-            background: #ffb347;
-            color: #1f2a3a;
-            padding: 8px 22px;
-            border-radius: 100px;
-            font-weight: 600;
-            font-size: 0.9rem;
             display: flex;
             align-items: center;
-            gap: 10px;
-            box-shadow: 0 4px 8px rgba(255, 180, 50, 0.3);
-            border: 1px solid rgba(255, 215, 120, 0.5);
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 100px;
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.15), rgba(251, 146, 60, 0.08));
+            border: 1px solid rgba(251, 146, 60, 0.25);
+            color: #fbbf24;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            box-shadow: 0 4px 16px -4px rgba(251, 146, 60, 0.2);
         }
-        .badge-pro i { font-size: 1rem; }
+
+        .badge-pro i { font-size: 0.85rem; }
+
+        /* ===== Main Layout ===== */
         .main-layout {
             display: grid;
-            grid-template-columns: 1fr 370px;
-            gap: 28px;
+            grid-template-columns: 1fr 380px;
+            gap: 24px;
         }
-        @media (max-width: 920px) { .main-layout { grid-template-columns: 1fr; gap: 30px; } }
-        .experiment-stage {
-            background: #ffffffd9;
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            border-radius: 32px;
-            padding: 22px 22px 28px;
-            box-shadow: 0 8px 20px rgba(0, 20, 30, 0.08);
-            border: 1px solid rgba(255,255,255,0.7);
+
+        @media (max-width: 1080px) {
+            .main-layout { grid-template-columns: 1fr; }
         }
-        .stage-title {
+
+        /* ===== Stage ===== */
+        .stage {
+            background: var(--glass);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stage::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(120, 180, 255, 0.3), transparent);
+        }
+
+        .stage-toolbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
-            font-weight: 500;
-            color: #1d3557;
+            margin-bottom: 20px;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
         }
-        .stage-title .left-group {
+
+        .toolbar-left {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
         }
-        .stage-title .left-group span {
-            background: #dce9f7;
-            padding: 6px 18px;
-            border-radius: 40px;
-            font-size: 0.8rem;
-            color: #1f4a7a;
-        }
-        .model-selector {
-            background: #e8f0fe;
-            border-radius: 60px;
-            border: 1px solid #b8cee8;
+
+        /* 模式选择器 */
+        .mode-tabs {
             display: flex;
-            overflow: hidden;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 14px;
+            padding: 4px;
+            border: 1px solid var(--border);
+            gap: 2px;
         }
-        .model-selector button {
+
+        .mode-tabs button {
             background: transparent;
             border: none;
-            padding: 6px 16px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: #1f3a57;
+            padding: 8px 18px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-2);
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            letter-spacing: 0.01em;
+            white-space: nowrap;
         }
-        .model-selector button.active { background: #1f4f8a; color: white; }
-        .model-selector button:hover:not(.active) { background: #d4e4fc; }
-        .ideal-toggle {
+
+        .mode-tabs button:hover:not(.active) {
+            color: var(--text-1);
+            background: rgba(120, 180, 255, 0.05);
+        }
+
+        .mode-tabs button.active {
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: #0a1020;
+            box-shadow: 0 4px 12px -2px var(--accent-glow);
+        }
+
+        /* 开关按钮 */
+        .toggle-btn {
             display: flex;
             align-items: center;
-            gap: 10px;
-            background: #e8f0fe;
-            padding: 6px 16px 6px 20px;
-            border-radius: 60px;
-            border: 1px solid #b8cee8;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: #1f3a57;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border);
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-1);
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.2s;
             user-select: none;
+            white-space: nowrap;
         }
-        .ideal-toggle i { font-size: 1rem; color: #2b6a9e; }
-        .ideal-toggle.active {
-            background: #d4e4fc;
-            border-color: #4f8fc9;
-            box-shadow: 0 0 0 2px rgba(30, 100, 180, 0.2);
+
+        .toggle-btn:hover {
+            border-color: var(--border-strong);
+            background: rgba(120, 180, 255, 0.05);
         }
+
+        .toggle-btn.active {
+            background: rgba(79, 195, 247, 0.12);
+            border-color: rgba(79, 195, 247, 0.4);
+            color: var(--accent);
+        }
+
+        .toggle-btn i { font-size: 0.85rem; }
+
         .toggle-switch {
-            width: 40px;
-            height: 22px;
-            background: #b0c8df;
-            border-radius: 40px;
+            width: 32px;
+            height: 18px;
+            background: rgba(120, 180, 255, 0.15);
+            border-radius: 20px;
             position: relative;
             transition: 0.25s;
             flex-shrink: 0;
         }
+
         .toggle-switch::after {
             content: '';
             position: absolute;
-            width: 18px;
-            height: 18px;
-            background: white;
+            width: 14px;
+            height: 14px;
+            background: var(--text-1);
             border-radius: 50%;
             top: 2px;
             left: 2px;
-            transition: 0.25s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-        .ideal-toggle.active .toggle-switch { background: #1f6cb0; }
-        .ideal-toggle.active .toggle-switch::after { left: 20px; }
-        .ctrl-btn {
-            background: #e8f0fe;
-            border: none;
-            padding: 8px 18px;
-            border-radius: 60px;
-            font-weight: 500;
-            color: #1f4a7a;
+
+        .toggle-btn.active .toggle-switch {
+            background: var(--accent);
+        }
+
+        .toggle-btn.active .toggle-switch::after {
+            left: 16px;
+            background: #0a1020;
+        }
+
+        /* 控制按钮 */
+        .icon-btn {
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            padding: 8px 16px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border);
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-1);
             cursor: pointer;
-            transition: 0.2s;
-            border: 1px solid #b8cee8;
-            font-size: 0.85rem;
+            transition: all 0.2s;
+            white-space: nowrap;
         }
-        .ctrl-btn:hover { background: #d0e2f7; border-color: #8eb3d9; }
-        .ctrl-btn.paused {
-            background: #ffdbb5;
-            border-color: #e8a85c;
-            color: #8a5a1a;
+
+        .icon-btn:hover {
+            border-color: var(--border-strong);
+            background: rgba(120, 180, 255, 0.05);
+            color: var(--text-0);
         }
-        .trajectory-toggle {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: #e8f0fe;
-            padding: 6px 16px 6px 20px;
-            border-radius: 60px;
-            border: 1px solid #b8cee8;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: #1f3a57;
-            cursor: pointer;
-            transition: 0.2s;
-            user-select: none;
+
+        .icon-btn.paused {
+            background: rgba(251, 146, 60, 0.12);
+            border-color: rgba(251, 146, 60, 0.3);
+            color: var(--orange);
         }
-        .trajectory-toggle i { font-size: 1rem; color: #2b6a9e; }
-        .trajectory-toggle.active {
-            background: #d4e4fc;
-            border-color: #4f8fc9;
-            box-shadow: 0 0 0 2px rgba(30, 100, 180, 0.2);
-        }
-        .trajectory-toggle .toggle-switch { width: 34px; height: 20px; }
-        .trajectory-toggle .toggle-switch::after { width: 16px; height: 16px; }
-        .trajectory-toggle.active .toggle-switch::after { left: 16px; }
-        .reset-btn {
-            background: #e3ecf9;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 60px;
-            font-weight: 500;
-            color: #1f4a7a;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: 0.2s;
-            border: 1px solid transparent;
-        }
-        .reset-btn:hover { background: #d0e2f7; border-color: #8eb3d9; }
-        .canvas-wrapper {
-            background: #eaf1fb;
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: inset 0 4px 8px rgba(0,0,0,0.02), 0 10px 20px -10px rgba(0,20,40,0.1);
-            aspect-ratio: 16 / 10;
-            min-height: 260px;
+
+        .icon-btn i { font-size: 0.85rem; }
+
+        /* ===== Canvas ===== */
+        .canvas-wrap {
             position: relative;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            background: #060a12;
+            border: 1px solid var(--border);
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5);
+            aspect-ratio: 16 / 10;
+            min-height: 280px;
         }
+
         #physicsCanvas {
             display: block;
             width: 100%;
             height: 100%;
-            background: #eaf1fb;
             cursor: grab;
         }
+
         #physicsCanvas:active { cursor: grabbing; }
+
+        /* ===== Controls ===== */
         .controls-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-            gap: 16px 18px;
-            margin-top: 24px;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 14px;
+            margin-top: 20px;
         }
-        .param-item {
-            background: #f2f8ff;
-            border-radius: 24px;
-            padding: 12px 16px 16px;
-            border: 1px solid rgba(255,255,255,0.7);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+
+        @media (max-width: 600px) {
+            .controls-grid { grid-template-columns: repeat(2, 1fr); }
         }
-        .param-item label {
+
+        .param {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            transition: border-color 0.2s;
+        }
+
+        .param:hover {
+            border-color: var(--border-strong);
+        }
+
+        .param-header {
             display: flex;
             justify-content: space-between;
-            font-weight: 500;
-            color: #1f3a57;
-            font-size: 0.85rem;
-            letter-spacing: 0.2px;
-            margin-bottom: 4px;
+            align-items: center;
+            margin-bottom: 10px;
         }
-        .param-item label i { color: #3e6b9b; width: 20px; }
-        .param-item input[type="range"] {
+
+        .param-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-1);
+            letter-spacing: 0.02em;
+        }
+
+        .param-label i {
+            color: var(--accent);
+            font-size: 0.8rem;
+            width: 16px;
+            text-align: center;
+        }
+
+        .param-value {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+            background: rgba(79, 195, 247, 0.1);
+            padding: 2px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(79, 195, 247, 0.2);
+            min-width: 48px;
+            text-align: center;
+        }
+
+        input[type="range"] {
             width: 100%;
             height: 6px;
-            background: #cbdae9;
+            background: rgba(120, 180, 255, 0.12);
             border-radius: 10px;
             -webkit-appearance: none;
             appearance: none;
             outline: none;
-            margin: 6px 0 2px;
+            cursor: pointer;
         }
-        .param-item input[type="range"]::-webkit-slider-thumb {
+
+        input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
             width: 18px;
             height: 18px;
-            background: #1f4f8a;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
             border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 4px 8px rgba(20, 60, 130, 0.3);
-            border: 2px solid white;
-            transition: 0.1s;
+            cursor: grab;
+            box-shadow: 0 2px 8px var(--accent-glow), 0 0 0 3px rgba(79, 195, 247, 0.15);
+            border: 2px solid #0a1020;
+            transition: transform 0.15s;
         }
-        .param-item input[type="range"]:disabled { opacity: 0.5; }
-        .param-item input[type="range"]:disabled::-webkit-slider-thumb {
-            background: #7a9abb;
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        input[type="range"]:active::-webkit-slider-thumb {
+            cursor: grabbing;
+            transform: scale(1.2);
+        }
+
+        input[type="range"]:disabled {
+            opacity: 0.4;
             cursor: not-allowed;
         }
-        .param-value {
-            text-align: right;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #123456;
-            background: white;
-            padding: 0 12px;
-            border-radius: 40px;
-            display: inline-block;
-            float: right;
-            margin-top: 2px;
-            border: 1px solid #d0def0;
+
+        input[type="range"]:disabled::-webkit-slider-thumb {
+            background: var(--text-2);
+            cursor: not-allowed;
+            box-shadow: none;
         }
-        .report-sidebar {
-            background: #ffffffdd;
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border-radius: 32px;
-            padding: 24px 20px 28px;
-            border: 1px solid rgba(255,255,255,0.7);
-            box-shadow: 0 8px 24px rgba(0, 20, 30, 0.08);
+
+        /* ===== Report Sidebar ===== */
+        .report {
+            background: var(--glass-strong);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-lg);
             display: flex;
             flex-direction: column;
+            position: relative;
+            overflow: hidden;
         }
-        .report-sidebar h3 {
-            font-weight: 600;
-            color: #0b2a47;
-            font-size: 1.3rem;
+
+        .report::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(120, 180, 255, 0.3), transparent);
+        }
+
+        .report-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .report-title {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 6px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-0);
+            letter-spacing: -0.01em;
         }
-        .report-sidebar h3 i { color: #2b6a9e; }
-        .report-meta {
+
+        .report-title i {
+            color: var(--accent);
+            font-size: 1rem;
+        }
+
+        .status-pill {
+            font-size: 0.72rem;
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-pill.running {
+            background: rgba(52, 211, 153, 0.12);
+            color: var(--green);
+            border: 1px solid rgba(52, 211, 153, 0.25);
+        }
+
+        .status-pill.paused {
+            background: rgba(251, 146, 60, 0.12);
+            color: var(--orange);
+            border: 1px solid rgba(251, 146, 60, 0.25);
+        }
+
+        .status-pill i { font-size: 0.6rem; }
+
+        /* 能量卡片 */
+        .energy-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .energy-item {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+        }
+
+        .energy-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .energy-item-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             font-size: 0.8rem;
-            color: #567394;
-            border-bottom: 1px solid #dae5f2;
-            padding-bottom: 12px;
-            margin-bottom: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            font-weight: 600;
+            color: var(--text-1);
         }
-        .status-badge {
+
+        .energy-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .energy-dot.kinetic { background: var(--orange); box-shadow: 0 0 8px var(--orange); }
+        .energy-dot.potential { background: var(--blue); box-shadow: 0 0 8px var(--blue); }
+        .energy-dot.mechanical { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+        .energy-number {
+            font-size: 1rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-0);
+            letter-spacing: -0.02em;
+        }
+
+        .energy-number .unit {
             font-size: 0.7rem;
-            padding: 3px 14px;
-            border-radius: 40px;
             font-weight: 600;
+            color: var(--text-2);
+            margin-left: 2px;
         }
-        .status-badge.running { background: #27ae60; color: white; }
-        .status-badge.paused { background: #e67e22; color: white; }
-        .report-content {
-            flex: 1;
-            background: #f4faff;
-            border-radius: 20px;
-            padding: 16px 16px;
-            margin-bottom: 18px;
-            border: 1px solid #e2edfb;
-            min-height: 200px;
-            font-size: 0.92rem;
-            line-height: 1.7;
-            color: #1f3853;
-            box-shadow: inset 0 2px 6px rgba(0,0,0,0.02);
-        }
-        .report-content p {
-            margin-bottom: 4px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .report-content .highlight {
-            background: #dceaff;
-            padding: 0 12px;
-            border-radius: 40px;
-            font-weight: 600;
-            color: #00337a;
-        }
-        .energy-bar-wrap {
-            background: #dce5f0;
-            border-radius: 30px;
-            height: 12px;
-            width: 100%;
-            margin: 6px 0 10px;
+
+        .energy-bar {
+            height: 6px;
+            background: rgba(120, 180, 255, 0.08);
+            border-radius: 10px;
             overflow: hidden;
             position: relative;
         }
-        .energy-bar-fill {
+
+        .energy-fill {
             height: 100%;
-            width: 0%;
-            border-radius: 30px;
-            transition: width 0.1s ease;
+            border-radius: 10px;
+            transition: width 0.15s ease;
+            position: relative;
         }
-        .energy-bar-fill.kinetic { background: #e67e22; }
-        .energy-bar-fill.potential { background: #2e86de; }
-        .energy-bar-fill.mechanical { background: #27ae60; }
-        .chart-wrap {
-            background: #f4faff;
-            border-radius: 20px;
-            padding: 10px 10px 6px;
-            margin-bottom: 14px;
-            border: 1px solid #e2edfb;
+
+        .energy-fill.kinetic {
+            background: linear-gradient(90deg, #fb923c, #fdba74);
+            box-shadow: 0 0 12px rgba(251, 146, 60, 0.4);
         }
+
+        .energy-fill.potential {
+            background: linear-gradient(90deg, #60a5fa, #93c5fd);
+            box-shadow: 0 0 12px rgba(96, 165, 250, 0.4);
+        }
+
+        .energy-fill.mechanical {
+            background: linear-gradient(90deg, #34d399, #6ee7b7);
+            box-shadow: 0 0 12px rgba(52, 211, 153, 0.4);
+        }
+
+        /* 统计行 */
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--radius-sm);
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .stat-label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--text-2);
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text-0);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* 图表 */
+        .chart-container {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
         .chart-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 6px;
-            font-size: 0.78rem;
-            color: #567394;
+            margin-bottom: 10px;
         }
+
+        .chart-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-1);
+            letter-spacing: 0.02em;
+        }
+
         .chart-legend {
             display: flex;
             gap: 10px;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
+            color: var(--text-2);
         }
+
         .chart-legend span {
             display: flex;
             align-items: center;
-            gap: 3px;
+            gap: 4px;
         }
-        .legend-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-        }
+
         #energyChart {
             display: block;
             width: 100%;
-            height: 120px;
-            background: #ffffff;
-            border-radius: 12px;
+            height: 110px;
+            border-radius: 8px;
         }
-        .action-buttons {
+
+        /* 按钮组 */
+        .actions {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            margin-top: 4px;
+            gap: 10px;
+            margin-top: auto;
         }
-        .btn-primary, .btn-outline {
-            border: none;
-            padding: 14px 10px;
-            border-radius: 60px;
-            font-weight: 600;
-            font-size: 1rem;
+
+        .btn {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
+            gap: 10px;
+            padding: 14px 20px;
+            border-radius: 14px;
+            font-size: 0.88rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: 0.2s;
-            background: white;
-            border: 1px solid #c6d9ee;
-            color: #1f4a7a;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            border: none;
+            letter-spacing: 0.01em;
         }
+
         .btn-primary {
-            background: #1f4f8a;
-            color: white;
-            border: 1px solid #1f4f8a;
-            box-shadow: 0 8px 16px -6px #1f4f8a55;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: #0a1020;
+            box-shadow: 0 8px 24px -6px var(--accent-glow);
         }
-        .btn-primary i { color: #ffd966; }
+
         .btn-primary:hover {
-            background: #143b66;
-            transform: scale(1.01);
-            box-shadow: 0 10px 20px -6px #143b66aa;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px -6px var(--accent-glow);
         }
-        .btn-outline { background: transparent; border: 1px solid #b6cee9; }
-        .btn-outline:hover { background: #e7f0fd; border-color: #8eb3db; }
-        .footnote {
-            margin-top: 16px;
-            font-size: 0.75rem;
-            color: #6a86a3;
-            text-align: center;
-            border-top: 1px solid #dae5f2;
-            padding-top: 14px;
+
+        .btn-primary:active {
+            transform: translateY(0);
         }
-        .mode-badge {
+
+        .btn-primary i { color: #0a1020; }
+
+        .btn-secondary {
+            background: rgba(120, 180, 255, 0.06);
+            color: var(--text-1);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(120, 180, 255, 0.1);
+            border-color: var(--border-strong);
+            color: var(--text-0);
+        }
+
+        .lock-hint {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
             font-size: 0.7rem;
-            background: #2b6a9e;
-            color: white;
-            padding: 2px 12px;
-            border-radius: 40px;
-            margin-left: 6px;
+            color: var(--text-2);
+            margin-top: 4px;
         }
-        @media (max-width: 600px) {
-            .sandbox-container { padding: 14px; }
-            .header h1 { font-size: 1.4rem; }
+
+        /* 模式标签 */
+        .mode-badge {
+            font-size: 0.68rem;
+            padding: 3px 10px;
+            border-radius: 100px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            background: rgba(52, 211, 153, 0.12);
+            color: var(--green);
+            border: 1px solid rgba(52, 211, 153, 0.25);
+            margin-left: 8px;
         }
+
+        /* 底部说明 */
+        .footer-hint {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.72rem;
+            color: var(--text-2);
+            padding-top: 16px;
+            margin-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-hint i { color: var(--accent); font-size: 0.7rem; }
+
+        /* 隐藏元素 */
+        .hidden { display: none !important; }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(120, 180, 255, 0.15);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(120, 180, 255, 0.25); }
     </style>
 </head>
 <body>
 
-<div class="sandbox-container">
-    <div class="header">
-        <h1><i class="fas fa-flask"></i> 物理沙盒</h1>
-        <div class="badge-pro"><i class="fas fa-crown"></i> 专业版 · 报告导出</div>
-    </div>
+<div class="app">
+    <!-- Header -->
+    <header class="header">
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="fas fa-atom"></i>
+            </div>
+            <div class="brand-text">
+                <h1>物理沙盒</h1>
+                <p>Interactive Physics Sandbox</p>
+            </div>
+        </div>
+        <div class="badge-pro">
+            <i class="fas fa-crown"></i>
+            <span>Pro 专业版</span>
+        </div>
+    </header>
 
+    <!-- Main -->
     <div class="main-layout">
-        <div class="experiment-stage">
-            <div class="stage-title">
-                <div class="left-group">
-                    <span><i class="fas fa-arrow-pointer" style="margin-right: 6px;"></i> 拖拽小球 · 探究能量</span>
-                    <div class="model-selector" id="modelSelector">
+        <!-- Stage -->
+        <div class="stage">
+            <div class="stage-toolbar">
+                <div class="toolbar-left">
+                    <div class="mode-tabs" id="modelSelector">
                         <button class="active" data-model="bounce">自由落体</button>
                         <button data-model="pendulum">单摆</button>
                         <button data-model="spring">弹簧振子</button>
                     </div>
-                    <div class="ideal-toggle" id="idealToggle">
-                        <i class="fas fa-star"></i> 理想
+                    <div class="toggle-btn" id="idealToggle">
+                        <i class="fas fa-star"></i>
+                        <span>理想</span>
                         <div class="toggle-switch"></div>
                     </div>
-                    <button class="ctrl-btn" id="pauseBtn"><i class="fas fa-pause"></i> 暂停</button>
-                    <div class="trajectory-toggle" id="trajectoryToggle">
-                        <i class="fas fa-wave-square"></i> 轨迹
+                    <button class="icon-btn" id="pauseBtn">
+                        <i class="fas fa-pause"></i>
+                        <span>暂停</span>
+                    </button>
+                    <div class="toggle-btn" id="trajectoryToggle">
+                        <i class="fas fa-wave-square"></i>
+                        <span>轨迹</span>
                         <div class="toggle-switch"></div>
                     </div>
                 </div>
-                <button class="reset-btn" id="resetSimBtn"><i class="fas fa-rotate-right"></i> 重置</button>
+                <button class="icon-btn" id="resetSimBtn">
+                    <i class="fas fa-rotate-right"></i>
+                    <span>重置</span>
+                </button>
             </div>
 
-            <div class="canvas-wrapper">
+            <div class="canvas-wrap">
                 <canvas id="physicsCanvas" width="900" height="560"></canvas>
             </div>
 
             <div class="controls-grid" id="controlsGrid">
-                <div class="param-item">
-                    <label><i class="fas fa-weight-scale"></i> 质量 m <span class="param-value" id="massVal">1.0</span></label>
+                <div class="param">
+                    <div class="param-header">
+                        <div class="param-label"><i class="fas fa-weight-scale"></i>质量 m</div>
+                        <div class="param-value" id="massVal">1.0</div>
+                    </div>
                     <input type="range" id="massSlider" min="0.3" max="3.0" step="0.1" value="1.0">
                 </div>
-                <div class="param-item" id="paramVelocity">
-                    <label><i class="fas fa-arrow-right"></i> 初速度 v₀ <span class="param-value" id="velVal">3.0</span></label>
+                <div class="param" id="paramVelocity">
+                    <div class="param-header">
+                        <div class="param-label"><i class="fas fa-arrow-right"></i>初速度 v₀</div>
+                        <div class="param-value" id="velVal">3.0</div>
+                    </div>
                     <input type="range" id="velocitySlider" min="0.0" max="6.0" step="0.2" value="3.0">
                 </div>
-                <div class="param-item" id="paramAngle" style="display:none;">
-                    <label><i class="fas fa-arrows-spin"></i> 摆角 θ <span class="param-value" id="angleVal">30</span>°</label>
+                <div class="param hidden" id="paramAngle">
+                    <div class="param-header">
+                        <div class="param-label"><i class="fas fa-arrows-spin"></i>摆角 θ</div>
+                        <div class="param-value" id="angleVal">30°</div>
+                    </div>
                     <input type="range" id="angleSlider" min="5" max="75" step="1" value="30">
                 </div>
-                <div class="param-item" id="paramLength" style="display:none;">
-                    <label><i class="fas fa-ruler"></i> 摆长 L <span class="param-value" id="lengthVal">1.5</span> m</label>
+                <div class="param hidden" id="paramLength">
+                    <div class="param-header">
+                        <div class="param-label"><i class="fas fa-ruler"></i>摆长 L</div>
+                        <div class="param-value" id="lengthVal">1.5m</div>
+                    </div>
                     <input type="range" id="lengthSlider" min="0.5" max="2.5" step="0.05" value="1.5">
                 </div>
-                <div class="param-item" id="paramAmplitude" style="display:none;">
-                    <label><i class="fas fa-arrows-left-right"></i> 振幅 A <span class="param-value" id="amplitudeVal">80</span> px</label>
+                <div class="param hidden" id="paramAmplitude">
+                    <div class="param-header">
+                        <div class="param-label"><i class="fas fa-arrows-left-right"></i>振幅 A</div>
+                        <div class="param-value" id="amplitudeVal">80px</div>
+                    </div>
                     <input type="range" id="amplitudeSlider" min="20" max="150" step="5" value="80">
                 </div>
-                <div class="param-item" id="paramStiffness" style="display:none;">
-                    <label><i class="fas fa-spring"></i> 劲度系数 k <span class="param-value" id="stiffnessVal">2.0</span></label>
+                <div class="param hidden" id="paramStiffness">
+                    <div class="param-header">
+                        <div class="param-label"><i class="fas fa-spring"></i>劲度系数 k</div>
+                        <div class="param-value" id="stiffnessVal">2.0</div>
+                    </div>
                     <input type="range" id="stiffnessSlider" min="0.5" max="5.0" step="0.1" value="2.0">
                 </div>
-                <div class="param-item" id="paramDamping">
-                    <label><i class="fas fa-droplet"></i> 阻尼 b <span class="param-value" id="dampVal">0.02</span></label>
+                <div class="param" id="paramDamping">
+                    <div class="param-header">
+                        <div class="param-label"><i class="fas fa-droplet"></i>阻尼 b</div>
+                        <div class="param-value" id="dampVal">0.02</div>
+                    </div>
                     <input type="range" id="dampingSlider" min="0.00" max="0.10" step="0.002" value="0.02">
                 </div>
-                <div class="param-item" id="paramRestitution">
-                    <label><i class="fas fa-arrows-spin"></i> 恢复系数 e <span class="param-value" id="restitutionVal">0.85</span></label>
+                <div class="param" id="paramRestitution">
+                    <div class="param-header">
+                        <div class="param-label"><i class="fas fa-arrows-spin"></i>恢复系数 e</div>
+                        <div class="param-value" id="restitutionVal">0.85</div>
+                    </div>
                     <input type="range" id="restitutionSlider" min="0.30" max="1.00" step="0.01" value="0.85">
                 </div>
             </div>
         </div>
 
-        <div class="report-sidebar">
-            <h3><i class="fas fa-file-pen"></i> 实验报告 <span id="modeIndicator" class="mode-badge" style="background:#27ae60;">实际</span></h3>
-            <div class="report-meta">
-                <span><i class="far fa-clock"></i> 实时更新</span>
-                <span class="status-badge running" id="statusBadge"><i class="fas fa-play"></i> 运行中</span>
+        <!-- Report -->
+        <aside class="report">
+            <div class="report-header">
+                <div class="report-title">
+                    <i class="fas fa-chart-line"></i>
+                    实验报告
+                    <span id="modeIndicator" class="mode-badge">实际</span>
+                </div>
+                <div class="status-pill running" id="statusBadge">
+                    <i class="fas fa-circle"></i>
+                    <span>运行中</span>
+                </div>
             </div>
 
-            <div class="report-content" id="reportContent">
-                <p><strong>⚡ 动能 Ek</strong> <span class="highlight" id="reportKinetic">0.00</span> J</p>
-                <div class="energy-bar-wrap"><div class="energy-bar-fill kinetic" id="kineticBar" style="width:0%"></div></div>
-
-                <p><strong>⬆ 势能 Ep</strong> <span class="highlight" id="reportPotential">0.00</span> J</p>
-                <div class="energy-bar-wrap"><div class="energy-bar-fill potential" id="potentialBar" style="width:0%"></div></div>
-
-                <p><strong>🔄 机械能 E</strong> <span class="highlight" id="reportMechanical">0.00</span> J</p>
-                <div class="energy-bar-wrap"><div class="energy-bar-fill mechanical" id="mechanicalBar" style="width:0%"></div></div>
-
-                <p style="margin-top: 8px; border-top: 1px dashed #b8cfe5; padding-top: 10px;">
-                    <span>损失 ΔE</span> <span class="highlight" id="energyLoss">0.000</span> J
-                </p>
-                <p><span>模拟步数</span> <span class="highlight" id="stepCounter">0</span></p>
-                <p><span id="heightLabel">高度 h</span> <span class="highlight" id="heightDisplay">0.00</span> m</p>
-                <p id="angleDisplayRow" style="display:none;"><span>摆角 θ</span> <span class="highlight" id="angleDisplay">0.0</span>°</p>
-                <p id="displacementDisplayRow" style="display:none;"><span>位移 x</span> <span class="highlight" id="displacementDisplay">0.00</span> m</p>
+            <div class="energy-list">
+                <div class="energy-item">
+                    <div class="energy-item-header">
+                        <div class="energy-item-name">
+                            <span class="energy-dot kinetic"></span>
+                            动能 Ek
+                        </div>
+                        <div class="energy-number"><span id="reportKinetic">0.00</span><span class="unit">J</span></div>
+                    </div>
+                    <div class="energy-bar"><div class="energy-fill kinetic" id="kineticBar" style="width:0%"></div></div>
+                </div>
+                <div class="energy-item">
+                    <div class="energy-item-header">
+                        <div class="energy-item-name">
+                            <span class="energy-dot potential"></span>
+                            势能 Ep
+                        </div>
+                        <div class="energy-number"><span id="reportPotential">0.00</span><span class="unit">J</span></div>
+                    </div>
+                    <div class="energy-bar"><div class="energy-fill potential" id="potentialBar" style="width:0%"></div></div>
+                </div>
+                <div class="energy-item">
+                    <div class="energy-item-header">
+                        <div class="energy-item-name">
+                            <span class="energy-dot mechanical"></span>
+                            机械能 E
+                        </div>
+                        <div class="energy-number"><span id="reportMechanical">0.00</span><span class="unit">J</span></div>
+                    </div>
+                    <div class="energy-bar"><div class="energy-fill mechanical" id="mechanicalBar" style="width:0%"></div></div>
+                </div>
             </div>
 
-            <div class="chart-wrap">
+            <div class="stats-row">
+                <div class="stat-item">
+                    <span class="stat-label">损失 ΔE</span>
+                    <span class="stat-value"><span id="energyLoss">0.000</span> J</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">步数</span>
+                    <span class="stat-value" id="stepCounter">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label" id="heightLabel">高度 h</span>
+                    <span class="stat-value"><span id="heightDisplay">0.00</span> m</span>
+                </div>
+                <div class="stat-item" id="angleDisplayRow" style="display:none;">
+                    <span class="stat-label">摆角 θ</span>
+                    <span class="stat-value"><span id="angleDisplay">0.0</span>°</span>
+                </div>
+                <div class="stat-item" id="displacementDisplayRow" style="display:none;">
+                    <span class="stat-label">位移 x</span>
+                    <span class="stat-value"><span id="displacementDisplay">0.00</span> m</span>
+                </div>
+            </div>
+
+            <div class="chart-container">
                 <div class="chart-header">
-                    <span>📈 能量随时间变化</span>
+                    <span class="chart-title">能量变化</span>
                     <div class="chart-legend">
-                        <span><span class="legend-dot" style="background:#e67e22;"></span>Ek</span>
-                        <span><span class="legend-dot" style="background:#2e86de;"></span>Ep</span>
-                        <span><span class="legend-dot" style="background:#27ae60;"></span>E</span>
+                        <span><span class="energy-dot kinetic" style="width:6px;height:6px;"></span>Ek</span>
+                        <span><span class="energy-dot potential" style="width:6px;height:6px;"></span>Ep</span>
+                        <span><span class="energy-dot mechanical" style="width:6px;height:6px;"></span>E</span>
                     </div>
                 </div>
                 <canvas id="energyChart" width="640" height="240"></canvas>
             </div>
 
-            <div class="action-buttons">
-                <button class="btn-primary" id="exportReportBtn"><i class="fas fa-file-pdf"></i> 导出完整报告 (付费)</button>
-                <button class="btn-outline" id="exportQuestionBtn"><i class="fas fa-file-export"></i> 导出题目 & 数据 (付费)</button>
-                <div style="font-size: 0.75rem; color: #4f7193; display: flex; gap: 8px; justify-content: center; margin-top: 2px;">
-                    <i class="fas fa-lock"></i> 高级导出需订阅专业版
+            <div class="actions">
+                <button class="btn btn-primary" id="exportReportBtn">
+                    <i class="fas fa-file-arrow-down"></i>
+                    导出完整报告
+                </button>
+                <button class="btn btn-secondary" id="exportQuestionBtn">
+                    <i class="fas fa-file-export"></i>
+                    导出题目 & 数据
+                </button>
+                <div class="lock-hint">
+                    <i class="fas fa-lock"></i>
+                    高级导出需订阅 Pro
                 </div>
             </div>
-            <div class="footnote">
-                <i class="fas fa-rotate"></i> 拖拽小球改变位置 · 观察能量转化
+
+            <div class="footer-hint">
+                <i class="fas fa-hand-pointer"></i>
+                拖拽小球改变位置 · 观察能量转化
             </div>
-        </div>
+        </aside>
     </div>
 </div>
 
@@ -685,9 +1075,9 @@
         const RIGHT_WALL = 850;
         const PENDULUM_PIVOT_X = 450;
         const PENDULUM_PIVOT_Y = 70;
-        const SPRING_ANCHOR_X = 850;      // 弹簧右端固定点
-        const SPRING_REST_X = 600;        // 弹簧平衡位置
-        const SPRING_Y = 300;             // 弹簧水平线
+        const SPRING_ANCHOR_X = 850;
+        const SPRING_REST_X = 600;
+        const SPRING_Y = 300;
 
         let ball = {
             x: 240, y: 300,
@@ -704,12 +1094,11 @@
         let pendulumInitialAngle = 30 * Math.PI / 180;
         let pendulumTime = 0;
 
-        // 弹簧振子状态
         let springState = {
-            displacement: 80,   // 相对平衡位置的位移（像素）
-            velocity: 0,        // 速度（像素/秒）
-            stiffness: 2.0,     // 劲度系数
-            amplitude: 80,      // 初始振幅（像素）
+            displacement: 80,
+            velocity: 0,
+            stiffness: 2.0,
+            amplitude: 80,
         };
         let springTime = 0;
 
@@ -727,7 +1116,6 @@
         const REST_THRESHOLD = 0.02;
         const ZERO_THRESHOLD = 0.04;
 
-        // ===== 能量历史 =====
         const MAX_HISTORY = 300;
         let energyHistory = [];
 
@@ -763,28 +1151,15 @@
         }
 
         // ===== 弹簧振子物理（高中物理理想模型） =====
-        // 依据：人教版选择性必修第一册"机械振动"
-        // 弹簧振子是理想化模型，不计摩擦，做等幅简谐运动
-        // 回复力 F = -kx，角频率 ω₀ = √(k/m)，周期 T = 2π√(m/k)
-        // 位移 x(t) = A · cos(ω₀t)
-        // 势能为弹性势能 Ep = ½kx²
         function updateSpring() {
-            // 劲度系数换算成和像素单位匹配的尺度
             const k = springState.stiffness * 100;
             const m = mass;
             const omega0 = Math.sqrt(k / m);
-
             springTime += 1 / 60;
-
             springState.displacement = springState.amplitude * Math.cos(omega0 * springTime);
-            // 速度：dx/dt = -A·ω₀·sin(ω₀t)
             springState.velocity = -springState.amplitude * omega0 * Math.sin(omega0 * springTime);
-
-            // 更新球的位置（水平振动）
             ball.x = SPRING_REST_X - springState.displacement;
             ball.y = SPRING_Y;
-
-            // 速度分量
             ball.vx = -springState.velocity;
             ball.vy = 0;
         }
@@ -792,7 +1167,7 @@
         // ===== 模型切换 =====
         function switchModel(model) {
             currentModel = model;
-            document.querySelectorAll('.model-selector button').forEach(btn => {
+            document.querySelectorAll('.mode-tabs button').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.model === model);
             });
 
@@ -800,35 +1175,25 @@
             const isPendulum = model === 'pendulum';
             const isSpring = model === 'spring';
 
-            // 自由落体专属
-            paramVelocity.style.display = isBounce ? '' : 'none';
-            paramDamping.style.display = isBounce ? '' : 'none';
-            paramRestitution.style.display = isBounce ? '' : 'none';
+            paramVelocity.classList.toggle('hidden', !isBounce);
+            paramDamping.classList.toggle('hidden', !isBounce);
+            paramRestitution.classList.toggle('hidden', !isBounce);
+            paramAngle.classList.toggle('hidden', !isPendulum);
+            paramLength.classList.toggle('hidden', !isPendulum);
+            paramAmplitude.classList.toggle('hidden', !isSpring);
+            paramStiffness.classList.toggle('hidden', !isSpring);
 
-            // 单摆专属
-            paramAngle.style.display = isPendulum ? '' : 'none';
-            paramLength.style.display = isPendulum ? '' : 'none';
-
-            // 弹簧专属
-            paramAmplitude.style.display = isSpring ? '' : 'none';
-            paramStiffness.style.display = isSpring ? '' : 'none';
-
-            // 理想开关：只有自由落体需要
             idealToggle.style.display = isBounce ? '' : 'none';
 
-            // 模式标签
             if (isPendulum) {
                 modeIndicator.textContent = '理想单摆';
-                modeIndicator.style.background = '#1f8a4a';
             } else if (isSpring) {
-                modeIndicator.textContent = '理想弹簧振子';
-                modeIndicator.style.background = '#1f8a4a';
+                modeIndicator.textContent = '理想弹簧';
             } else {
-                modeIndicator.textContent = isIdealMode ? '理想 (无损耗)' : '实际 (有损耗)';
-                modeIndicator.style.background = isIdealMode ? '#1f8a4a' : '#27ae60';
+                modeIndicator.textContent = isIdealMode ? '理想' : '实际';
             }
 
-            heightLabel.textContent = isBounce ? '高度 h' : (isPendulum ? '高度 h (相对最低点)' : '位移 x');
+            heightLabel.textContent = isBounce ? '高度 h' : (isPendulum ? '高度 h' : '位移 x');
             angleDisplayRow.style.display = isPendulum ? '' : 'none';
             displacementDisplayRow.style.display = isSpring ? '' : 'none';
             isStopped = false;
@@ -846,7 +1211,6 @@
         function calcMechanicalEnergy(ballState) {
             const v = Math.sqrt(ballState.vx * ballState.vx + ballState.vy * ballState.vy);
             let h, potential, kinetic;
-
             kinetic = 0.5 * ballState.mass * v * v;
 
             if (currentModel === 'pendulum') {
@@ -856,9 +1220,8 @@
                 h = lenMeters * (1 - Math.cos(angle));
                 potential = ballState.mass * GRAVITY * h * 100;
             } else if (currentModel === 'spring') {
-                // 弹性势能 Ep = ½kx²
                 const k = springState.stiffness * 100;
-                const x = springState.displacement / 100; // 转米
+                const x = springState.displacement / 100;
                 potential = 0.5 * k * x * x;
             } else {
                 h = Math.max(0, (GROUND_Y - ballState.y - ballState.radius) / 100);
@@ -889,7 +1252,6 @@
             displayLoss = initialMechanicalEnergy;
         }
 
-        // ===== 重置 =====
         function resetSimulation() {
             mass = parseFloat(massSlider.value);
             initialVelocity = parseFloat(velocitySlider.value);
@@ -922,7 +1284,6 @@
                 ball.vx = 0;
                 ball.vy = 0;
             } else {
-                // 弹簧振子
                 const amp = parseFloat(amplitudeSlider.value);
                 springState.stiffness = parseFloat(stiffnessSlider.value);
                 springState.amplitude = amp;
@@ -943,7 +1304,6 @@
             drawEnergyChart();
         }
 
-        // ===== 物理更新 =====
         function physicsUpdate() {
             if (isPaused) return;
             if (isStopped) return;
@@ -970,7 +1330,6 @@
                 return;
             }
 
-            // 自由落体
             let dampCoeff = isIdealMode ? 0 : damping;
             let restCoeff = isIdealMode ? 1.0 : restitution;
 
@@ -1021,7 +1380,6 @@
             updateReportAndBars();
         }
 
-        // ===== 报告更新 =====
         function updateReportAndBars() {
             if (isStopped) {
                 updateDisplay(0, 0, 0, initialMechanicalEnergy);
@@ -1131,15 +1489,18 @@
             mechanicalBar.style.width = (Math.min(mechanical / maxScale, 1) * 100) + '%';
         }
 
-        // ===== 能量曲线图 =====
         function drawEnergyChart() {
             const w = energyChart.width;
             const h = energyChart.height;
             ectx.clearRect(0, 0, w, h);
-            ectx.fillStyle = '#ffffff';
+
+            const grad = ectx.createLinearGradient(0, 0, 0, h);
+            grad.addColorStop(0, '#0a1020');
+            grad.addColorStop(1, '#060a12');
+            ectx.fillStyle = grad;
             ectx.fillRect(0, 0, w, h);
 
-            ectx.strokeStyle = '#e8f0f8';
+            ectx.strokeStyle = 'rgba(120, 180, 255, 0.08)';
             ectx.lineWidth = 1;
             for (let i = 1; i < 4; i++) {
                 const y = (h / 4) * i;
@@ -1150,8 +1511,8 @@
             }
 
             if (energyHistory.length < 2) {
-                ectx.fillStyle = '#a8bdd4';
-                ectx.font = '13px "Segoe UI"';
+                ectx.fillStyle = 'rgba(168, 184, 212, 0.4)';
+                ectx.font = '12px -apple-system, sans-serif';
                 ectx.textAlign = 'center';
                 ectx.fillText('数据采集中...', w / 2, h / 2);
                 ectx.textAlign = 'left';
@@ -1166,25 +1527,27 @@
             maxE = Math.ceil(maxE * 1.15);
 
             const padLeft = 30;
-            const padRight = 8;
-            const padTop = 8;
+            const padRight = 10;
+            const padTop = 10;
             const padBottom = 16;
             const plotW = w - padLeft - padRight;
             const plotH = h - padTop - padBottom;
 
-            ectx.fillStyle = '#8aa4bd';
-            ectx.font = '10px "Segoe UI"';
+            ectx.fillStyle = 'rgba(168, 184, 212, 0.5)';
+            ectx.font = '10px -apple-system, sans-serif';
             ectx.textAlign = 'right';
-            ectx.fillText(maxE.toFixed(1), padLeft - 4, padTop + 8);
-            ectx.fillText((maxE / 2).toFixed(1), padLeft - 4, padTop + plotH / 2 + 3);
-            ectx.fillText('0', padLeft - 4, padTop + plotH);
+            ectx.fillText(maxE.toFixed(1), padLeft - 6, padTop + 8);
+            ectx.fillText((maxE / 2).toFixed(1), padLeft - 6, padTop + plotH / 2 + 3);
+            ectx.fillText('0', padLeft - 6, padTop + plotH);
             ectx.textAlign = 'left';
 
-            const drawLine = (key, color) => {
+            const drawLine = (key, color, glow) => {
                 ectx.beginPath();
                 ectx.strokeStyle = color;
                 ectx.lineWidth = 2;
                 ectx.lineJoin = 'round';
+                ectx.shadowColor = glow;
+                ectx.shadowBlur = 6;
                 for (let i = 0; i < energyHistory.length; i++) {
                     const x = padLeft + (i / (MAX_HISTORY - 1)) * plotW;
                     const y = padTop + plotH - (energyHistory[i][key] / maxE) * plotH;
@@ -1192,16 +1555,12 @@
                     else ectx.lineTo(x, y);
                 }
                 ectx.stroke();
+                ectx.shadowBlur = 0;
             };
 
-            drawLine('ek', '#e67e22');
-            drawLine('ep', '#2e86de');
-            drawLine('e', '#27ae60');
-
-            ectx.fillStyle = '#8aa4bd';
-            ectx.font = '10px "Segoe UI"';
-            ectx.textAlign = 'left';
-            ectx.fillText('时间 →', w - 50, h - 3);
+            drawLine('ek', '#fb923c', 'rgba(251, 146, 60, 0.5)');
+            drawLine('ep', '#60a5fa', 'rgba(96, 165, 250, 0.5)');
+            drawLine('e', '#34d399', 'rgba(52, 211, 153, 0.5)');
         }
 
         function updateSlidersDisplay() {
@@ -1209,13 +1568,12 @@
             velVal.textContent = velocitySlider.value;
             dampVal.textContent = isIdealMode ? '0.00' : dampingSlider.value;
             restitutionVal.textContent = isIdealMode ? '1.00' : restitutionSlider.value;
-            angleVal.textContent = angleSlider.value;
-            lengthVal.textContent = lengthSlider.value;
-            amplitudeVal.textContent = amplitudeSlider.value;
+            angleVal.textContent = angleSlider.value + '°';
+            lengthVal.textContent = lengthSlider.value + 'm';
+            amplitudeVal.textContent = amplitudeSlider.value + 'px';
             stiffnessVal.textContent = stiffnessSlider.value;
         }
 
-        // ===== 理想模式（仅自由落体适用） =====
         function setIdealMode(enable) {
             isIdealMode = enable;
             if (enable) {
@@ -1226,8 +1584,7 @@
                 dampVal.textContent = '0.00';
                 restitutionVal.textContent = '1.00';
                 idealToggle.classList.add('active');
-                modeIndicator.textContent = '理想 (无损耗)';
-                modeIndicator.style.background = '#1f8a4a';
+                modeIndicator.textContent = '理想';
                 damping = 0.0;
                 restitution = 1.0;
             } else {
@@ -1238,8 +1595,7 @@
                 dampVal.textContent = damping.toFixed(3);
                 restitutionVal.textContent = restitution.toFixed(2);
                 idealToggle.classList.remove('active');
-                modeIndicator.textContent = '实际 (有损耗)';
-                modeIndicator.style.background = '#27ae60';
+                modeIndicator.textContent = '实际';
             }
             isStopped = false;
             resetSimulation();
@@ -1249,7 +1605,6 @@
             setIdealMode(!isIdealMode);
         });
 
-        // ===== 滑块 =====
         function onSliderChange() {
             mass = parseFloat(massSlider.value);
             initialVelocity = parseFloat(velocitySlider.value);
@@ -1298,37 +1653,30 @@
         amplitudeSlider.addEventListener('input', onSliderChange);
         stiffnessSlider.addEventListener('input', onSliderChange);
 
-        // ===== 交互 =====
         trajectoryToggle.addEventListener('click', function(e) {
             e.stopPropagation();
             showTrajectory = !showTrajectory;
-            if (showTrajectory) {
-                trajectoryToggle.classList.add('active');
-                trajectoryPoints = [];
-            } else {
-                trajectoryToggle.classList.remove('active');
-                trajectoryPoints = [];
-            }
+            trajectoryToggle.classList.toggle('active', showTrajectory);
+            trajectoryPoints = [];
         });
 
         function togglePause() {
             isPaused = !isPaused;
             if (isPaused) {
-                pauseBtn.innerHTML = '<i class="fas fa-play"></i> 继续';
+                pauseBtn.innerHTML = '<i class="fas fa-play"></i><span>继续</span>';
                 pauseBtn.classList.add('paused');
-                statusBadge.innerHTML = '<i class="fas fa-pause"></i> 已暂停';
-                statusBadge.className = 'status-badge paused';
+                statusBadge.className = 'status-pill paused';
+                statusBadge.innerHTML = '<i class="fas fa-circle"></i><span>已暂停</span>';
             } else {
-                pauseBtn.innerHTML = '<i class="fas fa-pause"></i> 暂停';
+                pauseBtn.innerHTML = '<i class="fas fa-pause"></i><span>暂停</span>';
                 pauseBtn.classList.remove('paused');
-                statusBadge.innerHTML = '<i class="fas fa-play"></i> 运行中';
-                statusBadge.className = 'status-badge running';
+                statusBadge.className = 'status-pill running';
+                statusBadge.innerHTML = '<i class="fas fa-circle"></i><span>运行中</span>';
             }
         }
         pauseBtn.addEventListener('click', togglePause);
         resetBtn.addEventListener('click', resetSimulation);
 
-        // ===== 拖拽 =====
         function getMousePos(e) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
@@ -1389,11 +1737,8 @@
                 ball.vx = 0;
                 ball.vy = 0;
             } else if (currentModel === 'spring') {
-                // 弹簧：只允许水平拖动，改变位移
                 let disp = SPRING_REST_X - newX;
-                // 限制振幅范围
                 const maxAmp = parseFloat(amplitudeSlider.max);
-                const minAmp = parseFloat(amplitudeSlider.min);
                 disp = Math.max(-maxAmp, Math.min(maxAmp, disp));
                 springState.displacement = disp;
                 springState.amplitude = Math.abs(disp);
@@ -1428,18 +1773,16 @@
                 canvas.style.cursor = 'grab';
 
                 if (currentModel === 'pendulum') {
-                    // 同步摆角滑块
                     const angleDeg = Math.abs(pendulumInitialAngle * 180 / Math.PI);
                     const clampedDeg = Math.max(5, Math.min(75, angleDeg));
                     angleSlider.value = clampedDeg.toFixed(0);
-                    angleVal.textContent = angleSlider.value;
+                    angleVal.textContent = angleSlider.value + '°';
                     pendulumTime = 0;
                 } else if (currentModel === 'spring') {
-                    // 同步振幅滑块
                     const amp = Math.abs(springState.displacement);
                     const clampedAmp = Math.max(20, Math.min(150, amp));
                     amplitudeSlider.value = clampedAmp.toFixed(0);
-                    amplitudeVal.textContent = amplitudeSlider.value;
+                    amplitudeVal.textContent = amplitudeSlider.value + 'px';
                     springState.amplitude = clampedAmp;
                     springTime = 0;
                 } else {
@@ -1466,13 +1809,28 @@
 
         // ===== 绘图 =====
         function drawScene() {
-            ctx.clearRect(0, 0, 900, 560);
-
+            // 深色背景
             const grad = ctx.createLinearGradient(0, 0, 0, 560);
-            grad.addColorStop(0, '#d4e4fc');
-            grad.addColorStop(0.7, '#c0d4ec');
+            grad.addColorStop(0, '#0d1526');
+            grad.addColorStop(1, '#060a12');
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, 900, 560);
+
+            // 网格
+            ctx.strokeStyle = 'rgba(120, 180, 255, 0.04)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < 900; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, 560);
+                ctx.stroke();
+            }
+            for (let y = 0; y < 560; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(900, y);
+                ctx.stroke();
+            }
 
             if (showTrajectory && trajectoryPoints.length > 1) {
                 ctx.beginPath();
@@ -1480,9 +1838,9 @@
                 for (let i = 1; i < trajectoryPoints.length; i++) {
                     ctx.lineTo(trajectoryPoints[i].x, trajectoryPoints[i].y);
                 }
-                ctx.strokeStyle = 'rgba(220, 80, 40, 0.6)';
-                ctx.lineWidth = 2.5;
-                ctx.shadowColor = 'rgba(200, 60, 20, 0.15)';
+                ctx.strokeStyle = 'rgba(251, 146, 60, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.shadowColor = 'rgba(251, 146, 60, 0.4)';
                 ctx.shadowBlur = 8;
                 ctx.stroke();
                 ctx.shadowBlur = 0;
@@ -1491,20 +1849,23 @@
             if (currentModel === 'pendulum') {
                 ctx.beginPath();
                 ctx.arc(PENDULUM_PIVOT_X, PENDULUM_PIVOT_Y, 8, 0, Math.PI * 2);
-                ctx.fillStyle = '#1a3a5a';
+                ctx.fillStyle = '#4fc3f7';
+                ctx.shadowColor = 'rgba(79, 195, 247, 0.6)';
+                ctx.shadowBlur = 12;
                 ctx.fill();
+                ctx.shadowBlur = 0;
 
                 ctx.beginPath();
                 ctx.moveTo(PENDULUM_PIVOT_X, PENDULUM_PIVOT_Y);
                 ctx.lineTo(ball.x, ball.y);
-                ctx.strokeStyle = '#4a6a8a';
+                ctx.strokeStyle = 'rgba(120, 180, 255, 0.4)';
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
                 const len = pendulumState.length;
                 ctx.beginPath();
                 ctx.arc(PENDULUM_PIVOT_X, PENDULUM_PIVOT_Y, len, -Math.PI/2.5, Math.PI/2.5);
-                ctx.strokeStyle = 'rgba(60, 100, 140, 0.12)';
+                ctx.strokeStyle = 'rgba(120, 180, 255, 0.08)';
                 ctx.lineWidth = 1;
                 ctx.setLineDash([3, 5]);
                 ctx.stroke();
@@ -1514,23 +1875,22 @@
                 const lowY = PENDULUM_PIVOT_Y + len;
                 ctx.beginPath();
                 ctx.arc(lowX, lowY, 4, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(40, 80, 120, 0.3)';
+                ctx.fillStyle = 'rgba(79, 195, 247, 0.4)';
                 ctx.fill();
-                ctx.fillStyle = 'rgba(40, 80, 120, 0.5)';
-                ctx.font = '10px "Segoe UI"';
+                ctx.fillStyle = 'rgba(168, 184, 212, 0.6)';
+                ctx.font = '10px -apple-system, sans-serif';
                 ctx.fillText('最低点', lowX + 10, lowY + 4);
 
             } else if (currentModel === 'spring') {
-                // 画弹簧
                 const anchorX = SPRING_ANCHOR_X;
                 const ballX = ball.x;
                 const y = SPRING_Y;
 
-                // 固定点（墙）
-                ctx.fillStyle = '#a8bfd8';
+                // 固定墙
+                ctx.fillStyle = 'rgba(120, 180, 255, 0.15)';
                 ctx.fillRect(anchorX, y - 30, 6, 60);
-                ctx.strokeStyle = '#4c6f8a';
-                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = 'rgba(120, 180, 255, 0.3)';
+                ctx.lineWidth = 1;
                 ctx.strokeRect(anchorX, y - 30, 6, 60);
 
                 // 弹簧线圈
@@ -1546,12 +1906,15 @@
                     ctx.lineTo(cx, cy);
                 }
                 ctx.lineTo(anchorX, y);
-                ctx.strokeStyle = '#5a7a9a';
+                ctx.strokeStyle = 'rgba(79, 195, 247, 0.5)';
                 ctx.lineWidth = 2;
+                ctx.shadowColor = 'rgba(79, 195, 247, 0.3)';
+                ctx.shadowBlur = 6;
                 ctx.stroke();
+                ctx.shadowBlur = 0;
 
-                // 平衡位置虚线
-                ctx.strokeStyle = 'rgba(60, 100, 140, 0.3)';
+                // 平衡位置
+                ctx.strokeStyle = 'rgba(120, 180, 255, 0.15)';
                 ctx.lineWidth = 1;
                 ctx.setLineDash([4, 6]);
                 ctx.beginPath();
@@ -1559,50 +1922,54 @@
                 ctx.lineTo(SPRING_REST_X, y + 60);
                 ctx.stroke();
                 ctx.setLineDash([]);
-                ctx.fillStyle = 'rgba(40, 80, 120, 0.5)';
-                ctx.font = '10px "Segoe UI"';
+                ctx.fillStyle = 'rgba(168, 184, 212, 0.5)';
+                ctx.font = '10px -apple-system, sans-serif';
                 ctx.fillText('平衡位置', SPRING_REST_X - 25, y + 75);
 
             } else {
-                ctx.fillStyle = '#6f92b0';
+                // 自由落体：地面
+                const grad2 = ctx.createLinearGradient(0, GROUND_Y, 0, 560);
+                grad2.addColorStop(0, 'rgba(120, 180, 255, 0.15)');
+                grad2.addColorStop(1, 'rgba(120, 180, 255, 0.02)');
+                ctx.fillStyle = grad2;
                 ctx.fillRect(0, GROUND_Y, 900, 560 - GROUND_Y);
-                ctx.strokeStyle = '#4c6f8a';
+
+                ctx.strokeStyle = 'rgba(120, 180, 255, 0.4)';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.moveTo(0, GROUND_Y);
                 ctx.lineTo(900, GROUND_Y);
                 ctx.stroke();
 
-                ctx.fillStyle = '#a8bfd8';
-                ctx.fillRect(LEFT_WALL-6, 10, 6, GROUND_Y-10);
-                ctx.fillRect(RIGHT_WALL, 10, 6, GROUND_Y-10);
+                ctx.fillStyle = 'rgba(120, 180, 255, 0.1)';
+                ctx.fillRect(LEFT_WALL-4, 20, 4, GROUND_Y-20);
+                ctx.fillRect(RIGHT_WALL, 20, 4, GROUND_Y-20);
             }
 
             // 小球
             const r = ball.radius;
-            ctx.shadowColor = 'rgba(0,0,0,0.25)';
-            ctx.shadowBlur = 14;
+            ctx.shadowColor = 'rgba(251, 146, 60, 0.6)';
+            ctx.shadowBlur = 20;
             const gradient = ctx.createRadialGradient(
                 ball.x - 6, ball.y - 6, r*0.1,
                 ball.x, ball.y, r
             );
-            gradient.addColorStop(0, '#ffb57c');
-            gradient.addColorStop(0.5, '#e07c3e');
-            gradient.addColorStop(1, '#aa4f1a');
+            gradient.addColorStop(0, '#fdba74');
+            gradient.addColorStop(0.5, '#fb923c');
+            gradient.addColorStop(1, '#c2410c');
             ctx.fillStyle = gradient;
             ctx.beginPath();
             ctx.arc(ball.x, ball.y, r, 0, Math.PI * 2);
             ctx.fill();
-            ctx.shadowBlur = 6;
-            ctx.fillStyle = 'rgba(255,255,230,0.35)';
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = 'rgba(255, 255, 230, 0.4)';
             ctx.beginPath();
             ctx.arc(ball.x-5, ball.y-7, r*0.25, 0, Math.PI*2);
             ctx.fill();
-            ctx.shadowBlur = 0;
 
-            // 左上角文字
-            ctx.fillStyle = '#1f3a5e';
-            ctx.font = '13px "Segoe UI"';
+            // 文字
+            ctx.fillStyle = 'rgba(234, 242, 255, 0.9)';
+            ctx.font = '600 13px -apple-system, sans-serif';
             if (currentModel === 'pendulum') {
                 const a = pendulumState.angle;
                 const lenM = pendulumState.length / 100;
@@ -1610,19 +1977,18 @@
                 ctx.fillText(`θ = ${(a * 180 / Math.PI).toFixed(1)}°`, 20, 30);
                 ctx.fillText(`L = ${lenM.toFixed(2)} m`, 20, 50);
                 ctx.fillText(`T = ${T.toFixed(2)} s`, 20, 70);
-                ctx.fillStyle = 'rgba(30, 100, 60, 0.75)';
-                ctx.font = '12px "Segoe UI"';
+                ctx.fillStyle = 'rgba(52, 211, 153, 0.8)';
+                ctx.font = '12px -apple-system, sans-serif';
                 ctx.fillText('理想单摆 · 不计空气阻力', 20, 92);
             } else if (currentModel === 'spring') {
                 const x = springState.displacement / 100;
                 const k = springState.stiffness;
-                const m = mass;
-                const T = 2 * Math.PI * Math.sqrt(m / k);
+                const T = 2 * Math.PI * Math.sqrt(mass / k);
                 ctx.fillText(`x = ${x.toFixed(2)} m`, 20, 30);
                 ctx.fillText(`k = ${k.toFixed(1)}`, 20, 50);
                 ctx.fillText(`T = ${T.toFixed(2)} s`, 20, 70);
-                ctx.fillStyle = 'rgba(30, 100, 60, 0.75)';
-                ctx.font = '12px "Segoe UI"';
+                ctx.fillStyle = 'rgba(52, 211, 153, 0.8)';
+                ctx.font = '12px -apple-system, sans-serif';
                 ctx.fillText('理想弹簧振子 · 不计摩擦', 20, 92);
             } else {
                 const h = Math.max(0, (GROUND_Y - ball.y - ball.radius) / 100);
@@ -1630,38 +1996,17 @@
                 ctx.fillText(`m = ${ball.mass.toFixed(2)} kg`, 20, 50);
             }
 
-            // 能量条
-            const barX = 20, barY = 110, barW = 14, maxH = 140;
-            const maxE = Math.max(displayMechanical, initialMechanicalEnergy, 5);
-            const drawBar = (x, y, ratio, color) => {
-                const h = Math.min(ratio, 1) * maxH;
-                ctx.fillStyle = '#d0dbe8';
-                ctx.fillRect(x, y, barW, maxH);
-                ctx.fillStyle = color;
-                ctx.fillRect(x, y + maxH - h, barW, h);
-                ctx.strokeStyle = '#8a9fb0';
-                ctx.lineWidth = 0.8;
-                ctx.strokeRect(x, y, barW, maxH);
-            };
-            drawBar(barX, barY, displayKinetic / maxE, '#e67e22');
-            drawBar(barX+20, barY, displayPotential / maxE, '#2e86de');
-            drawBar(barX+40, barY, displayMechanical / maxE, '#27ae60');
-            ctx.fillStyle = '#1f3a5e';
-            ctx.font = '9px "Segoe UI"';
-            ctx.fillText('Ek', barX+2, barY-6);
-            ctx.fillText('Ep', barX+22, barY-6);
-            ctx.fillText('E', barX+42, barY-6);
-
             if (isPaused) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+                ctx.fillStyle = 'rgba(6, 10, 18, 0.6)';
                 ctx.fillRect(0, 0, 900, 560);
-                ctx.fillStyle = '#1a3a5a';
-                ctx.font = 'bold 28px "Segoe UI"';
-                ctx.fillText('⏸ 已暂停', 380, 280);
+                ctx.fillStyle = 'rgba(234, 242, 255, 0.9)';
+                ctx.font = '700 28px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('⏸ 已暂停', 450, 280);
+                ctx.textAlign = 'left';
             }
         }
 
-        // ===== 导出 =====
         function handleExport(type) {
             let h, angle = 0, xSpring = 0;
             if (currentModel === 'pendulum') {
@@ -1718,16 +2063,15 @@
             【付费导出】完整版含图表与习题解析`;
 
             if (type === 'report') {
-                alert('🔒 付费功能：导出完整报告 (PDF/Word)\n\n' + reportText + '\n\n(演示弹窗，实际付款后生成)');
+                alert('🔒 付费功能：导出完整报告\n\n' + reportText + '\n\n(演示弹窗，实际付款后生成)');
             } else {
-                alert('📘 付费功能：导出题目 + 数据 (含图表)\n\n' + reportText + '\n\n(演示弹窗，实际付款后生成)');
+                alert('📘 付费功能：导出题目 + 数据\n\n' + reportText + '\n\n(演示弹窗，实际付款后生成)');
             }
         }
 
         exportReportBtn.addEventListener('click', () => handleExport('report'));
         exportQuestionBtn.addEventListener('click', () => handleExport('question'));
 
-        // ===== 启动 =====
         switchModel('bounce');
 
         function animate() {
